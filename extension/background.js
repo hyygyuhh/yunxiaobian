@@ -1,4 +1,4 @@
-importScripts('api.bundle.js')
+importScripts('crypto-es.js', 'api.bundle.js', 'qr-login.js')
 
 const NETEASE_URLS = [
   'https://music.163.com/',
@@ -202,8 +202,7 @@ chrome.cookies.onChanged.addListener(async (changeInfo) => {
   if (!changeInfo.cookie.domain?.includes('163.com')) return
   if (!['MUSIC_U', '__csrf', 'MUSIC_A'].includes(changeInfo.cookie.name)) return
 
-  // Default off: auto-copy of web MUSIC_U confuses APP Cookie / thinktank users
-  const { autoCopy } = await chrome.storage.sync.get({ autoCopy: false })
+  const { autoCopy } = await chrome.storage.sync.get({ autoCopy: true })
   if (!autoCopy) return
   if (changeInfo.cookie.name !== 'MUSIC_U') return
 
@@ -233,7 +232,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GET_SETTINGS') {
-    chrome.storage.sync.get({ autoCopy: false }).then(sendResponse)
+    chrome.storage.sync.get({ autoCopy: true }).then(sendResponse)
     return true
   }
 
@@ -241,6 +240,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.sync
       .set({ autoCopy: !!message.autoCopy })
       .then(() => sendResponse({ ok: true }))
+    return true
+  }
+
+  if (message.type === 'QR_GET_KEY') {
+    QrLogin.getQrKey()
+      .then(sendResponse)
+      .catch((err) => sendResponse({ ok: false, error: err.message }))
+    return true
+  }
+
+  if (message.type === 'QR_GET_IMAGE') {
+    const { key } = message
+    const result = QrLogin.getQrImage(key)
+    sendResponse({ ok: true, result })
+    return true
+  }
+
+  if (message.type === 'QR_CHECK_STATUS') {
+    const { key } = message
+    QrLogin.checkQrStatus(key)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ ok: false, error: err.message }))
     return true
   }
 

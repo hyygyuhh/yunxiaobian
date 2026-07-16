@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "网易云乐谱工具",
-  "version": "1.2.3",
-  "description": "网易云乐谱查询/上传/贡献工具，含云小编 xeapi 投票审核",
+  "version": "1.1.0",
+  "description": "网易云乐谱查询/上传/贡献工具，内置 API，无需 npm start",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

@@ -2040,13 +2040,8 @@ var NeApiRouter = (() => {
           let cookieArr = cookie.split(";");
           let obj = {};
           cookieArr.forEach((i) => {
-            const trimmed = i.trim();
-            if (!trimmed) return;
-            const eqIndex = trimmed.indexOf("=");
-            if (eqIndex <= 0) return;
-            const key = trimmed.slice(0, eqIndex).trim();
-            const value = trimmed.slice(eqIndex + 1).trim();
-            if (key) obj[key] = value;
+            let arr = i.split("=");
+            obj[arr[0]] = arr[1];
           });
           return obj;
         },
@@ -26800,7 +26795,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         }
         if (options.crypto === "weapi") {
           headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";
-          const csrfToken = (headers.Cookie || "").match(/__csrf=([^;]+)/);
+          const csrfToken = (headers.Cookie || "").match(/_csrf=([^(;|$)]+)/);
           data.csrf_token = csrfToken ? csrfToken[1] : "";
           data = encrypt.weapi(data);
           url = url.replace(/\w*api/, "weapi");
@@ -26815,19 +26810,17 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         } else if (options.crypto === "eapi") {
           const cookie = options.cookie || {};
           const csrfToken = cookie.__csrf || "";
-          const os = cookie.os || "ios";
-          const isAndroid = os === "android";
           const header = {
-            osver: cookie.osver || (isAndroid ? "9" : "16.2"),
+            osver: cookie.osver || "17,1,2",
             deviceId: cookie.deviceId,
-            appver: cookie.appver || (isAndroid ? "9.5.45" : "9.0.90"),
+            appver: cookie.appver || "8.9.70",
             versioncode: cookie.versioncode || "140",
-            mobilename: cookie.mobilename || (isAndroid ? "SM-G977N" : ""),
+            mobilename: cookie.mobilename,
             buildver: cookie.buildver || Date.now().toString().substr(0, 10),
             resolution: cookie.resolution || "1920x1080",
             __csrf: csrfToken,
-            os,
-            channel: cookie.channel || (isAndroid ? "xiaomi" : "distribution"),
+            os: cookie.os || "ios",
+            channel: cookie.channel,
             requestId: `${Date.now()}_${Math.floor(Math.random() * 1e3).toString().padStart(4, "0")}`
           };
           if (cookie.MUSIC_U) header.MUSIC_U = cookie.MUSIC_U;
@@ -26835,13 +26828,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           headers.Cookie = Object.keys(header).map(
             (key) => `${encodeURIComponent(key)}=${encodeURIComponent(header[key])}`
           ).join("; ");
-          headers["User-Agent"] = options.ua || (
-            isAndroid
-              ? "NeteaseMusic/9.5.45(9005045);Dalvik/2.1.0 (Linux; U; Android 9; SM-G977N Build/LMY48Z)"
-              : "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)"
-          );
           data.header = header;
-          data.e_r = options.e_r !== undefined ? options.e_r : false;
           data = encrypt.eapi(options.url, data);
           url = url.replace(/\w*api/, "eapi");
         }
@@ -26856,7 +26843,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
       function parseSetCookie(header) {
         if (!header) return [];
         const raw = Array.isArray(header) ? header.join(",") : String(header);
-        return raw.split(/,(?=\s*[^;,]+=)/).map((x) => x.replace(/\s*Domain=[^;]+;?/gi, "").trim()).filter(Boolean);
+        return raw.split(/,(?=\s*[^;,]+=)/).map((x) => x.replace(/\s*Domain=[^(;|$)]+;*/, "").trim()).filter(Boolean);
       }
       function finalizeAnswer(answer, body, statusCode, isEapi) {
         try {
@@ -28564,417 +28551,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
     }
   });
 
-  // lib/xeapiCryptoBrowser.js
-  var xeapiCryptoBrowser_exports = {};
-  __export(xeapiCryptoBrowser_exports, {
-    fetchXeapiPublicKey: () => fetchXeapiPublicKey,
-    xeapi: () => xeapi,
-    xeapiDecryptPublicKey: () => xeapiDecryptPublicKey,
-    xeapiResDecrypt: () => xeapiResDecrypt,
-    xeapiResDecryptAsync: () => xeapiResDecryptAsync,
-    xeapiSign: () => xeapiSign
-  });
-  function hexToBytes(hex) {
-    const out = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < out.length; i++) {
-      out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    }
-    return out;
-  }
-  function randomBytes2(size) {
-    const arr = new Uint8Array(size);
-    globalThis.crypto.getRandomValues(arr);
-    return arr;
-  }
-  function bytesToBuffer(bytes) {
-    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  }
-  function concatBytes(...parts) {
-    const total = parts.reduce((sum, part) => sum + part.length, 0);
-    const out = new Uint8Array(total);
-    let offset = 0;
-    for (const part of parts) {
-      out.set(bytesToBuffer(part), offset);
-      offset += part.length;
-    }
-    return out;
-  }
-  function aesEcbEncrypt(keyBytes, plaintextBytes) {
-    const key = import_crypto_js2.default.lib.WordArray.create(bytesToBuffer(keyBytes));
-    const plain = import_crypto_js2.default.lib.WordArray.create(bytesToBuffer(plaintextBytes));
-    const encrypted = import_crypto_js2.default.AES.encrypt(plain, key, {
-      mode: import_crypto_js2.default.mode.ECB,
-      padding: import_crypto_js2.default.pad.Pkcs7
-    });
-    return wordArrayToUint8(encrypted.ciphertext);
-  }
-  function aesEcbDecrypt(keyBytes, ciphertextBytes) {
-    const key = import_crypto_js2.default.lib.WordArray.create(bytesToBuffer(keyBytes));
-    const cipher = import_crypto_js2.default.lib.WordArray.create(bytesToBuffer(ciphertextBytes));
-    const decrypted = import_crypto_js2.default.AES.decrypt({ ciphertext: cipher }, key, {
-      mode: import_crypto_js2.default.mode.ECB,
-      padding: import_crypto_js2.default.pad.Pkcs7
-    });
-    return wordArrayToUint8(decrypted);
-  }
-  function wordArrayToUint8(wordArray) {
-    const { words, sigBytes } = wordArray;
-    const out = new Uint8Array(sigBytes);
-    for (let i = 0; i < sigBytes; i++) {
-      out[i] = words[i >>> 2] >>> 24 - i % 4 * 8 & 255;
-    }
-    return out;
-  }
-  function xeapiSign(timestamp, nonce) {
-    const hash = import_crypto_js2.default.HmacSHA256(String(timestamp) + nonce, xeapiSignKey);
-    return import_crypto_js2.default.enc.Base64.stringify(hash);
-  }
-  function xeapiMidTransform(ciphertext) {
-    const random = randomBytes2(16);
-    const xored = new Uint8Array(ciphertext.length);
-    for (let i = 0; i < ciphertext.length; i++) {
-      xored[i] = ciphertext[i] ^ random[i & 15];
-    }
-    const b64 = new TextEncoder().encode(btoa(String.fromCharCode(...xored)));
-    const rot = b64.length ? (random[0] & 15) % b64.length : 0;
-    return concatBytes(random, b64.slice(rot), b64.slice(0, rot));
-  }
-  async function importX25519PublicKey(raw) {
-    const der = concatBytes(x25519SpkiPrefix, raw);
-    return globalThis.crypto.subtle.importKey("spki", der, { name: "X25519" }, false, []);
-  }
-  async function deriveX25519AesKey(sharedSecret, ephemeralPublicKey) {
-    const zero = new Uint8Array(32);
-    const prkWords = import_crypto_js2.default.HmacSHA256(
-      import_crypto_js2.default.lib.WordArray.create(sharedSecret.length ? sharedSecret : zero),
-      import_crypto_js2.default.lib.WordArray.create(zero)
-    );
-    const prk = wordArrayToUint8(prkWords);
-    const info = concatBytes(ephemeralPublicKey, new Uint8Array([1]));
-    const aesKeyWords = import_crypto_js2.default.HmacSHA256(
-      import_crypto_js2.default.lib.WordArray.create(info),
-      import_crypto_js2.default.lib.WordArray.create(prk)
-    );
-    return wordArrayToUint8(aesKeyWords).slice(0, 16);
-  }
-  async function xeapiEncryptS(dynamicKey, publicKeyState, os) {
-    const peerRaw = base64ToBytes(publicKeyState.publicKey);
-    const peerKey = await importX25519PublicKey(peerRaw);
-    const keyPair = await globalThis.crypto.subtle.generateKey(
-      { name: "X25519" },
-      true,
-      ["deriveBits"]
-    );
-    const exported = new Uint8Array(
-      await globalThis.crypto.subtle.exportKey("spki", keyPair.publicKey)
-    );
-    const ephemeralRaw = exported.slice(-32);
-    const sharedBits = await globalThis.crypto.subtle.deriveBits(
-      { name: "X25519", public: peerKey },
-      keyPair.privateKey,
-      256
-    );
-    const sharedSecret = new Uint8Array(sharedBits);
-    const aesKeyBytes = await deriveX25519AesKey(sharedSecret, ephemeralRaw);
-    const iv = randomBytes2(12);
-    const aesKey = await globalThis.crypto.subtle.importKey(
-      "raw",
-      aesKeyBytes,
-      { name: "AES-GCM" },
-      false,
-      ["encrypt"]
-    );
-    const plaintext = new TextEncoder().encode(
-      `${bytesToBase64(dynamicKey)}|${os}|${publicKeyState.sk || ""}`
-    );
-    const encrypted = new Uint8Array(
-      await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, plaintext)
-    );
-    const tag = encrypted.slice(-16);
-    const cipher = encrypted.slice(0, -16);
-    return concatBytes(ephemeralRaw, iv, cipher, tag);
-  }
-  function bytesToBase64(bytes) {
-    let binary = "";
-    for (const b of bytes) binary += String.fromCharCode(b);
-    return btoa(binary);
-  }
-  function base64ToBytes(text) {
-    const binary = atob(text);
-    const out = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-    return out;
-  }
-  function buildXeapiPlaintext(uri, data, options = {}) {
-    const fields = {};
-    const method = (options.method || "POST").toUpperCase();
-    if (method !== "POST") fields.method = method;
-    const url = new URL(uri, "https://interface.music.163.com");
-    if (url.search) fields.queryString = url.search.slice(1);
-    if (data !== void 0 && data != null) {
-      const bodyData = { ...data };
-      delete bodyData.e_r;
-      const body = new URLSearchParams(bodyData).toString();
-      if (body) fields.body = bytesToBase64(new TextEncoder().encode(body));
-    }
-    fields.queryString = fields.queryString ? `${fields.queryString}&e_r=true` : "e_r=true";
-    return JSON.stringify(fields);
-  }
-  async function xeapi(uri, data, options = {}) {
-    const publicKeyState = options.publicKeyState;
-    if (!publicKeyState) throw new Error("xeapi publicKeyState is required");
-    const activeSessionKey = options.sessionKey ? base64ToBytes(String(options.sessionKey)) : null;
-    const activeSessionId = options.sessionId || "";
-    const dynamicKey = activeSessionKey || randomBytes2(16);
-    const plaintext = new TextEncoder().encode(buildXeapiPlaintext(uri, data, options));
-    const b = aesEcbEncrypt(
-      dynamicKey,
-      xeapiMidTransform(aesEcbEncrypt(xeapiStaticKey, plaintext))
-    );
-    const s = await xeapiEncryptS(dynamicKey, publicKeyState, options.os || "android");
-    const r = aesEcbEncrypt(
-      xeapiStaticKey,
-      new TextEncoder().encode(
-        `${publicKeyState.version}|${activeSessionKey ? activeSessionId : ""}`
-      )
-    );
-    return {
-      B: bytesToBase64(b),
-      S: bytesToBase64(s),
-      R: bytesToBase64(r)
-    };
-  }
-  function xeapiResDecrypt(body) {
-    const buf = body instanceof Uint8Array ? body : new Uint8Array(body);
-    const decrypted = aesEcbDecrypt(eapiKey, buf);
-    if (decrypted[0] === 31 && decrypted[1] === 139) {
-      throw new Error("gzip response requires async decode");
-    }
-    return JSON.parse(new TextDecoder().decode(decrypted));
-  }
-  async function xeapiResDecryptAsync(body) {
-    const buf = body instanceof Uint8Array ? body : new Uint8Array(body);
-    const decrypted = aesEcbDecrypt(eapiKey, buf);
-    if (decrypted[0] === 31 && decrypted[1] === 139) {
-      if (typeof DecompressionStream !== "undefined") {
-        const stream = new Blob([decrypted]).stream().pipeThrough(new DecompressionStream("gzip"));
-        const text = await new Response(stream).text();
-        return JSON.parse(text);
-      }
-      throw new Error("gzip response requires async decode");
-    }
-    return JSON.parse(new TextDecoder().decode(decrypted));
-  }
-  function xeapiDecryptPublicKey(encryptedData) {
-    return JSON.parse(
-      new TextDecoder().decode(
-        aesEcbDecrypt(xeapiStaticKey, base64ToBytes(encryptedData))
-      )
-    );
-  }
-  function generateNonce() {
-    let nonce = "";
-    for (let i = 0; i < 16; i++) {
-      nonce += Math.floor(Math.random() * 10).toString();
-    }
-    return nonce;
-  }
-  async function fetchXeapiPublicKey(deviceId = "", currentPublicKey = {}) {
-    const nonce = generateNonce();
-    const timestamp = String(Date.now());
-    const data = {
-      appVersion: "9.5.45",
-      currentKeyVersion: currentPublicKey.version || "",
-      deviceId,
-      nonce,
-      os: "android",
-      requestType: "active",
-      signature: xeapiSign(timestamp, nonce),
-      t1: "",
-      t2: "",
-      timestamp,
-      uid: ""
-    };
-    const res = await fetch(
-      "https://interface3.music.163.com/api/gorilla/anti/crawler/security/key/get",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "NeteaseMusic/9.5.45(9005045);Dalvik/2.1.0 (Linux; U; Android 9; SM-G977N Build/LMY48Z)",
-          Cookie: deviceId ? `deviceId=${encodeURIComponent(deviceId)}` : ""
-        },
-        body: new URLSearchParams(data).toString()
-      }
-    );
-    const json = await res.json();
-    if (!json?.data?.encryptedData) throw new Error("xeapi \u516C\u94A5\u83B7\u53D6\u5931\u8D25");
-    if (json.data.signature && xeapiSign(json.data.timestamp, nonce) !== json.data.signature) {
-      throw new Error("xeapi \u516C\u94A5\u7B7E\u540D\u6821\u9A8C\u5931\u8D25");
-    }
-    const publicKey = xeapiDecryptPublicKey(json.data.encryptedData);
-    if (!publicKey.sk && currentPublicKey.sk) publicKey.sk = currentPublicKey.sk;
-    if (!publicKey.sk) throw new Error("xeapi \u516C\u94A5\u54CD\u5E94\u7F3A\u5C11 sk");
-    return publicKey;
-  }
-  var import_crypto_js2, xeapiStaticKey, xeapiSignKey, x25519SpkiPrefix, eapiKey;
-  var init_xeapiCryptoBrowser = __esm({
-    "lib/xeapiCryptoBrowser.js"() {
-      init_node_shim();
-      import_crypto_js2 = __toESM(require_crypto_js());
-      xeapiStaticKey = hexToBytes(
-        "ab1d5a430f6bb04a3f01e81ddd72bd916d5ce591248ac128714806d7f8fb1b84"
-      );
-      xeapiSignKey = "mUHCwVNWJbunMqAHf5MImuirT6plvs6VSFW62MGHstFQxhBGdEoIhLItH3djc4+FB/OKty3+lL2rGeoFBpVe5g==";
-      x25519SpkiPrefix = hexToBytes("302a300506032b656e032100");
-      eapiKey = new TextEncoder().encode("e82ckenh8dichen8");
-    }
-  });
-
-  // lib/xeapiClient.js
-  var require_xeapiClient = __commonJS({
-    "lib/xeapiClient.js"(exports, module) {
-      init_node_shim();
-      var { formatErrorMessage, toRequestError } = require_formatError();
-      function loadXeapiCrypto() {
-        try {
-          const nodeCrypto = (init_crypto_shim(), __toCommonJS(crypto_shim_exports));
-          if (typeof nodeCrypto.createCipheriv === "function") {
-            return init_xeapiCryptoBrowser(), __toCommonJS(xeapiCryptoBrowser_exports);
-          }
-        } catch {
-        }
-        return init_xeapiCryptoBrowser(), __toCommonJS(xeapiCryptoBrowser_exports);
-      }
-      var xeapiCrypto = loadXeapiCrypto();
-      var { xeapi: xeapi2, xeapiResDecrypt: xeapiResDecrypt2, xeapiResDecryptAsync: xeapiResDecryptAsync2, fetchXeapiPublicKey: fetchXeapiPublicKey2 } = xeapiCrypto;
-      var XEAPI_HOST = "https://interface3.music.163.com";
-      var cachedPublicKey = null;
-      var xeapiSessions = {
-        ugc: { id: "", key: "" },
-        cachalot: { id: "", key: "" },
-        thinktank: { id: "", key: "" },
-        default: { id: "", key: "" }
-      };
-      function getXeapiSessionGroup(apiPath = "") {
-        if (apiPath.includes("/thinktank/")) return "thinktank";
-        if (apiPath.includes("/cachalot/") || apiPath.includes("/mix/orpheus/")) {
-          return "cachalot";
-        }
-        if (apiPath.includes("/rep/ugc/") || apiPath.includes("/middle/")) {
-          return "ugc";
-        }
-        return "default";
-      }
-      function cookieObjectToHeaderString(obj) {
-        return Object.keys(obj).filter((key) => obj[key] != null && obj[key] !== "").map((key) => `${key}=${obj[key]}`).join("; ");
-      }
-      async function ensureXeapiPublicKey(deviceId) {
-        if (!deviceId) {
-          throw new Error("\u5BA1\u6838\u8BB0\u5F55\u9700\u4F7F\u7528 APP \u6293\u5305 Cookie\uFF08\u9700\u542B deviceId / sDeviceId\uFF09");
-        }
-        if (cachedPublicKey?.sk) return cachedPublicKey;
-        cachedPublicKey = await fetchXeapiPublicKey2(deviceId, cachedPublicKey || {});
-        return cachedPublicKey;
-      }
-      async function callXeapi(apiPath, data = {}, cookie = {}, options = {}) {
-        const deviceId = cookie.deviceId || cookie.sDeviceId || "";
-        const publicKeyState = await ensureXeapiPublicKey(deviceId);
-        const os = "android";
-        const appver = cookie.appver || "9.5.45";
-        const osver = cookie.osver || "9";
-        const buildver = cookie.buildver || "9005045";
-        const model = cookie.mobilename || "SM-G977N";
-        const ua = options.ua || `NeteaseMusic/${appver}(${buildver});Dalvik/2.1.0 (Linux; U; Android ${osver}; ${model} Build/LMY48Z)`;
-        const headers = {
-          "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
-          "User-Agent": ua,
-          Referer: "https://music.163.com/st/repo",
-          "X-Client-Enc-State": "ENCRYPTED",
-          "x-aeapi": "true",
-          "x-deviceid": deviceId,
-          "x-os": os,
-          "x-osver": osver,
-          "x-appver": appver,
-          "x-sdeviceid": cookie.sDeviceId || deviceId,
-          "x-buildver": buildver,
-          Cookie: cookieObjectToHeaderString({
-            ...cookie,
-            os,
-            osver,
-            appver,
-            buildver,
-            deviceId: encodeURIComponent(deviceId),
-            sDeviceId: encodeURIComponent(cookie.sDeviceId || deviceId),
-            channel: cookie.channel || "xiaomi"
-          })
-        };
-        if (cookie.MUSIC_U) headers["x-music-u"] = cookie.MUSIC_U;
-        const sessionGroup = getXeapiSessionGroup(apiPath);
-        const isThinktank = sessionGroup === "thinktank";
-        const isStatelessSession = isThinktank || sessionGroup === "cachalot";
-        const session = isStatelessSession ? { id: "", key: "" } : xeapiSessions[sessionGroup];
-        const encryptData = await xeapi2(apiPath, data, {
-          publicKeyState,
-          sessionId: session.id,
-          sessionKey: session.key,
-          os,
-          appver,
-          deviceId
-        });
-        const url = `${XEAPI_HOST}/xeapi${apiPath.replace(/^\/api/, "")}`;
-        const res = await fetch(url, {
-          method: "POST",
-          headers,
-          body: new URLSearchParams(encryptData).toString()
-        });
-        const rawBody = import_buffer.Buffer.from(await res.arrayBuffer());
-        const ssid = res.headers.get("x-encr-ssid");
-        const sskey = res.headers.get("x-encr-sskey");
-        if (!isStatelessSession && ssid && sskey) {
-          session.id = ssid;
-          session.key = sskey;
-        }
-        let body;
-        try {
-          if (!rawBody.length) {
-            throw new Error("empty body");
-          }
-          body = xeapiResDecryptAsync2 ? await xeapiResDecryptAsync2(rawBody) : xeapiResDecrypt2(rawBody);
-        } catch (decryptErr) {
-          if (res.status === 400) {
-            const hint = apiPath.includes("/thinktank/archives/history/") ? "\u8BF7\u5148\u5728 APP \u5185\u6253\u5F00\u300C\u4E91\u5C0F\u7F16 \u2192 \u5BA1\u6838\u8BB0\u5F55\u300D\u9875\u9762\u540E\u518D\u5BFC\u5165 HAR" : "\u8BF7\u4F7F\u7528 APP \u5185\u6293\u53D6\u7684 Cookie \u767B\u5F55\u540E\u518D\u8BD5";
-            throw new Error(`\u7F51\u6613\u4E91\u62D2\u7EDD\u4E86\u8BF7\u6C42\uFF08400\uFF09\uFF0C${hint}`);
-          }
-          if (res.status === 401 || res.status === 403) {
-            throw new Error("\u767B\u5F55\u72B6\u6001\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u5E76\u586B\u5165 Cookie");
-          }
-          if (!rawBody.length) {
-            throw new Error("\u4E91\u5C0F\u7F16\u63A5\u53E3\u8FD4\u56DE\u7A7A\u54CD\u5E94\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165 HAR \u540E\u518D\u8BD5");
-          }
-          if (!res.ok) {
-            throw toRequestError({ status: res.status, body: rawBody }, "\u4E91\u5C0F\u7F16\u63A5\u53E3\u8BF7\u6C42\u5931\u8D25");
-          }
-          throw new Error("\u4E91\u5C0F\u7F16\u63A5\u53E3\u54CD\u5E94\u89E3\u5BC6\u5931\u8D25\uFF0C\u8BF7\u786E\u8BA4 Cookie \u6765\u81EA APP \u6293\u5305\u4E14\u672A\u8FC7\u671F");
-        }
-        if (body.code != null) body.code = Number(body.code);
-        const allowCodes = options.allowCodes || [];
-        if (body.code !== void 0 && body.code !== 200 && !allowCodes.includes(body.code)) {
-          const msg = formatErrorMessage(body.message || body.msg, "");
-          if (msg) throw new Error(msg);
-          throw new Error(`\u8BF7\u6C42\u5931\u8D25 (${body.code})`);
-        }
-        if (!res.ok && body.code == null) {
-          throw toRequestError({ status: res.status, body }, "\u4E91\u5C0F\u7F16\u63A5\u53E3\u8BF7\u6C42\u5931\u8D25");
-        }
-        return body;
-      }
-      module.exports = {
-        callXeapi
-      };
-    }
-  });
-
   // lib/ugc.js
   var require_ugc = __commonJS({
     "lib/ugc.js"(exports, module) {
@@ -28985,7 +28561,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
       var { ugc_detail, ugc_user_devote } = require_ncmExports();
       var { cookieStringToObject } = require_playlist();
       var { withRetry } = require_retry();
-      var { callXeapi } = require_xeapiClient();
       var EAPI_HOST = "https://interface3.music.163.com";
       var UGC_API = {
         userGet: "/api/rep/ugc/user/get",
@@ -28999,12 +28574,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         examInfoGet: "/api/rep/ugc/exam/info/get",
         examStart: "/api/rep/ugc/exam/start",
         examQuestionGet: "/api/rep/ugc/exam/question/single/get",
-        examSubmit: "/api/rep/ugc/exam/submit",
-        tagAuditGuideAll: "/api/rep/ugc/tag/audit-guide-all",
-        auditDetailList: "/api/thinktank/audit/resource/detail-list",
-        auditDetail: "/api/thinktank/audit/resource/detail",
-        auditUpdate: "/api/thinktank/audit/resource/update",
-        archivesHistory: "/api/thinktank/archives/history/list"
+        examSubmit: "/api/rep/ugc/exam/submit"
       };
       var MALL_API = {
         productList: "/api/cachalot/product/list",
@@ -29049,35 +28619,13 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         4: "\u90E8\u5206\u901A\u8FC7",
         5: "\u5BA1\u6838\u901A\u8FC7"
       };
-      function decodeCookieValue(value) {
-        let text = String(value ?? "");
-        for (let i = 0; i < 3; i++) {
-          if (!/%[0-9A-Fa-f]{2}/.test(text)) break;
-          try {
-            const next = decodeURIComponent(text);
-            if (next === text) break;
-            text = next;
-          } catch {
-            break;
-          }
-        }
-        return text;
-      }
       function withUgcCookie(cookie) {
         const obj = withCookie(cookie);
-        const deviceId = decodeCookieValue(obj.deviceId || obj.sDeviceId || "");
-        const sDeviceId = decodeCookieValue(obj.sDeviceId || obj.deviceId || deviceId);
         return {
           ...obj,
           os: obj.os && obj.os !== "pc" ? obj.os : "android",
           appver: obj.appver || "9.5.45",
-          versioncode: obj.versioncode || "145",
-          buildver: obj.buildver || "9005045",
-          osver: obj.osver || "9",
-          deviceId,
-          sDeviceId: sDeviceId || deviceId,
-          channel: obj.channel || "xiaomi",
-          mobilename: obj.mobilename || "SM-G977N"
+          versioncode: obj.versioncode || "145"
         };
       }
       function unwrap(body) {
@@ -29135,26 +28683,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           },
           { attempts: 3 }
         );
-      }
-
-      function isAppUgcCookie(cookie) {
-        const obj = withCookie(cookie);
-        return Boolean(obj.deviceId || obj.sDeviceId);
-      }
-      function assertXeapiCookie(cookie) {
-        const obj = withUgcCookie(cookie);
-        const deviceId = obj.deviceId || obj.sDeviceId || "";
-        if (!deviceId) {
-          throw new Error("审核需要 APP Cookie（含 deviceId / sDeviceId），请用手机 Reqable 抓包后登录");
-        }
-        if (!obj.MUSIC_U && !obj.MUSIC_A) {
-          throw new Error("审核需要 APP Cookie（MUSIC_U 或 MUSIC_A）");
-        }
-        return obj;
-      }
-      async function callUgcXeapi(cookie, apiPath, data = {}, options = {}) {
-        const ugcCookie = assertXeapiCookie(cookie);
-        return callXeapi(apiPath, data, ugcCookie, options);
       }
       function formatUgcUserProfile(data = {}) {
         return {
@@ -29616,254 +29144,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           raw: body
         };
       }
-      function formatTagGuide(item = {}) {
-        const examples = Array.isArray(item.songExampleList) ? item.songExampleList : [];
-        return {
-          tagId: item.tagId,
-          tagName: item.tagName,
-          guideText: item.guideText,
-          examples: examples.map((song) => ({
-            id: song.id,
-            songName: song.songName,
-            albumName: song.albumName,
-            artistName: Array.isArray(song.artistName) ? song.artistName : [],
-            picUrl: song.picUrl
-          })),
-          raw: item
-        };
-      }
-      function formatVoteAuditItem(item = {}) {
-        return {
-          taskId: item.taskId,
-          resId: item.resId,
-          resName: item.resName,
-          artists: item.artists,
-          coverUrl: item.coverUrl,
-          songUrl: item.songUrl,
-          lyric: item.lyric,
-          transLyric: item.transLyric,
-          initResult: item.initResult,
-          tagId: item.tagId,
-          activityId: item.activityId,
-          auditGoalType: item.auditGoalType,
-          auditCount: item.auditCount,
-          auditTaskCount: item.auditTaskCount,
-          points: item.points,
-          nextAuditCount: item.nextAuditCount,
-          nextPoints: item.nextPoints,
-          taskClass: item.taskClass || "vote",
-          raw: item
-        };
-      }
-      function formatArchivesHistoryItem(item = {}) {
-        return {
-          taskId: item.taskId,
-          resId: item.resId,
-          resName: item.resName,
-          artists: item.artists,
-          imgUrl: item.imgUrl,
-          status: item.status,
-          points: item.points,
-          userJudgement: item.userJudgement,
-          type: item.type,
-          initJudgement: item.initJudgement,
-          time: item.time,
-          appealStatus: item.appealStatus,
-          appealId: item.appealId,
-          raw: item
-        };
-      }
-      async function fetchUgcTagAuditGuides(cookie) {
-        const body = await callUgcXeapi(cookie, UGC_API.tagAuditGuideAll);
-        const list = Array.isArray(body.data) ? body.data : body.data?.list || [];
-        return list.map(formatTagGuide);
-      }
-      async function fetchVoteAuditList(cookie, options = {}) {
-        const payload = {};
-        if (options.auditType != null && options.auditType !== "") {
-          payload.auditType = String(options.auditType);
-        }
-        if (options.activityId != null && options.activityId !== "") {
-          payload.activityId = String(options.activityId);
-        }
-        if (options.limit != null) payload.limit = String(options.limit);
-        let lastError = null;
-        for (const apiPath of [UGC_API.auditDetailList, UGC_API.auditDetail]) {
-          try {
-            const body = await callUgcXeapi(cookie, apiPath, payload);
-            const list = Array.isArray(body.data)
-              ? body.data
-              : body.data?.list
-                ? body.data.list
-                : body.data && body.data.taskId != null
-                  ? [body.data]
-                  : [];
-            return {
-              items: list.map(formatVoteAuditItem).filter((item) => item.taskId != null && item.resId != null),
-              raw: body
-            };
-          } catch (err) {
-            lastError = err;
-            if (!/接口未找到|404|未知/.test(err.message || "")) break;
-          }
-        }
-        throw lastError || new Error("获取审核列表失败");
-      }
-      async function fetchVoteAuditDetail(cookie, options = {}) {
-        const payload = {};
-        if (options.auditType != null && options.auditType !== "") {
-          payload.auditType = String(options.auditType);
-        }
-        if (options.activityId != null && options.activityId !== "") {
-          payload.activityId = String(options.activityId);
-        }
-        if (options.taskId != null) payload.taskId = String(options.taskId);
-        const body = await callUgcXeapi(cookie, UGC_API.auditDetail, payload);
-        const data = body.data || {};
-        if (data.taskId == null || data.resId == null) {
-          return {
-            item: null,
-            progress: {
-              activityId: data.activityId,
-              auditCount: data.auditCount,
-              auditTaskCount: data.auditTaskCount,
-              points: data.points,
-              nextAuditCount: data.nextAuditCount,
-              nextPoints: data.nextPoints
-            },
-            raw: body
-          };
-        }
-        return { item: formatVoteAuditItem(data), progress: null, raw: body };
-      }
-      async function submitVoteAudit(cookie, payload = {}) {
-        if (payload.taskId == null || payload.resId == null) {
-          throw new Error("缺少审核任务 taskId / resId");
-        }
-        const judgement = Number(payload.judgement);
-        if (judgement !== 1 && judgement !== 2) {
-          throw new Error("judgement 须为 1(同意) 或 2(不同意)");
-        }
-        const agree = judgement === 1;
-        const data = {
-          taskId: String(payload.taskId),
-          resId: String(payload.resId),
-          judgement: String(judgement),
-          vote: agree ? "1" : "0",
-          agree: agree ? "1" : "0"
-        };
-        if (payload.tagId != null && payload.tagId !== "") data.tagId = String(payload.tagId);
-        if (payload.activityId != null && payload.activityId !== "") {
-          data.activityId = String(payload.activityId);
-        }
-        if (payload.auditType != null && payload.auditType !== "") {
-          data.auditType = String(payload.auditType);
-        }
-        if (payload.auditGoalType != null && payload.auditGoalType !== "") {
-          data.auditGoalType = String(payload.auditGoalType);
-        }
-        if (payload.initResult != null && payload.initResult !== "") {
-          data.initResult = String(payload.initResult);
-          data.initJudgement = agree ? String(payload.initResult) : String(payload.initResult);
-          data.result = String(payload.initResult);
-        }
-        const candidates = [
-          UGC_API.auditUpdate,
-          "/api/thinktank/audit/resource/vote",
-          "/api/thinktank/audit/resource/submit",
-          "/api/thinktank/audit/vote"
-        ];
-        let lastError = null;
-        let body = null;
-        for (const apiPath of candidates) {
-          try {
-            body = await callUgcXeapi(cookie, apiPath, data, { allowCodes: [200, 400] });
-            break;
-          } catch (err) {
-            lastError = err;
-            if (!/接口未找到|404|未知/.test(err.message || "")) break;
-          }
-        }
-        if (!body) throw lastError || new Error("审核提交失败");
-        const result = body.data || {};
-        return {
-          ok: body.code === 200 || body.success === true,
-          success: result.success ?? result.result ?? body.success ?? body.code === 200,
-          points: result.points,
-          auditCount: result.auditCount,
-          message: body.message || body.msg || result.message || null,
-          dayErrorNum: result.dayErrorNum,
-          dayErrorNumStandard: result.dayErrorNumStandard,
-          dayErrorNumLimit: result.dayErrorNumLimit,
-          errorAnalysis: result.errorAnalysis,
-          data: result,
-          raw: body
-        };
-      }
-      async function fetchVoteAuditHistory(cookie, options = {}) {
-        const payload = {
-          limit: String(options.limit ?? 20),
-          offset: String(options.offset ?? 0)
-        };
-        if (options.type != null && options.type !== "") payload.type = String(options.type);
-        const body = await callUgcXeapi(cookie, UGC_API.archivesHistory, payload);
-        const data = body.data || {};
-        const records = Array.isArray(data.records) ? data.records : Array.isArray(data) ? data : [];
-        return {
-          total: data.total ?? records.length,
-          records: records.map(formatArchivesHistoryItem),
-          raw: body
-        };
-      }
-      async function startVoteAudit(cookie, options = {}) {
-        const auditType = options.auditType;
-        if (auditType == null || auditType === "") {
-          throw new Error("\u7F3A\u5C11\u5BA1\u6838\u7C7B\u578B auditType");
-        }
-        const activityId = options.activityId;
-        let guides = [];
-        if (Number(auditType) === 4) {
-          try {
-            guides = await fetchUgcTagAuditGuides(cookie);
-          } catch {
-            guides = [];
-          }
-        }
-        let listError = null;
-        let listResult = { items: [], raw: null };
-        try {
-          listResult = await fetchVoteAuditList(cookie, { auditType, activityId });
-        } catch (err) {
-          listError = err;
-        }
-        let items = listResult.items || [];
-        if (!items.length) {
-          try {
-            const detail = await fetchVoteAuditDetail(cookie, { auditType, activityId });
-            if (detail.item) {
-              items = [detail.item];
-            } else if (!listError) {
-              return {
-                items: [],
-                guides,
-                progress: detail.progress,
-                message: "\u6682\u65E0\u5F85\u5BA1\u6838\u4EFB\u52A1",
-                raw: detail.raw
-              };
-            }
-          } catch (detailErr) {
-            throw listError || detailErr;
-          }
-        }
-        if (!items.length && listError) throw listError;
-        return {
-          items,
-          guides,
-          progress: null,
-          message: null,
-          raw: listResult.raw
-        };
-      }
       async function fetchCachalotProductsStatus(cookie, productIds, options = {}) {
         if (!productIds?.length) return [];
         const bizCode = options.bizCode || DEFAULT_CACHALOT_BIZ_CODE;
@@ -30071,9 +29351,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         HONOR_ROLL_TYPE_LABELS,
         AUDIT_TYPE_LABELS,
         UGC_API,
-        callUgcEapi,
-        callUgcXeapi,
-        withUgcCookie,
         fetchUgcUserProfile,
         fetchIntegrationRecords,
         signUgcUser,
@@ -30090,12 +29367,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         startUgcExam,
         fetchUgcExamQuestion,
         submitUgcExamAnswer,
-        fetchUgcTagAuditGuides,
-        fetchVoteAuditList,
-        fetchVoteAuditDetail,
-        submitVoteAudit,
-        fetchVoteAuditHistory,
-        startVoteAudit,
         fetchUgcDetail,
         fetchUgcDetailAll,
         fetchCachalotProductList,
@@ -30159,13 +29430,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
       }
       function mergeSetCookieHeaders(cookieString, setCookies = []) {
         const map = parseCookieString(cookieString);
-        const hadAppDevice = Boolean(map.get("deviceId") || map.get("sDeviceId"));
-        const prevOs = map.get("os");
-        const prevAppver = map.get("appver");
-        const prevMusicU = map.get("MUSIC_U");
-        const prevMusicA = map.get("MUSIC_A");
-        const prevDeviceId = map.get("deviceId");
-        const prevSDeviceId = map.get("sDeviceId");
         for (const line of setCookies) {
           const part = String(line).split(";")[0];
           const eqIndex = part.indexOf("=");
@@ -30174,17 +29438,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           const value = part.slice(eqIndex + 1).trim();
           if (key) map.set(key, value);
         }
-        if (hadAppDevice) {
-          // Keep APP identity; weapi Set-Cookie must not PC-normalize or wipe tokens
-          if (prevOs) map.set("os", prevOs);
-          if (prevAppver) map.set("appver", prevAppver);
-          if (prevDeviceId) map.set("deviceId", prevDeviceId);
-          if (prevSDeviceId) map.set("sDeviceId", prevSDeviceId);
-          if (prevMusicU) map.set("MUSIC_U", prevMusicU);
-          if (prevMusicA) map.set("MUSIC_A", prevMusicA);
-        } else {
-          map.set("os", "pc");
-        }
+        map.set("os", "pc");
         return cookieObjectToString(Object.fromEntries(map));
       }
       function formatPlaylistError(message) {
@@ -30214,9 +29468,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         return cookieString;
       }
       async function ensureCsrfCookie(cookieString) {
-        const map0 = parseCookieString(cookieString);
-        const hadAppDevice = Boolean(map0.get("deviceId") || map0.get("sDeviceId"));
-        let current = hadAppDevice ? String(cookieString || "").trim() : withOsPc(cookieString);
+        let current = withOsPc(cookieString);
         if (parseCookieString(current).get("__csrf")) return current;
         current = await refreshCsrfToken(current);
         if (parseCookieString(current).get("__csrf")) return current;
@@ -30266,147 +29518,53 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           profile
         };
       }
-      function buildEapiCookie(cookie) {
-        const initial = parseCookieString(cookie);
-        const deviceId = initial.get("deviceId") || initial.get("sDeviceId") || "";
-        const rawOs = initial.get("os");
-        const os = rawOs && rawOs !== "pc" ? rawOs : "android";
-        const isAndroid = os === "android";
-        const cookieObj = Object.fromEntries(initial);
-        return {
-          ...cookieObj,
-          os,
-          appver: initial.get("appver") || (isAndroid ? "9.5.45" : "9.0.90"),
-          versioncode: initial.get("versioncode") || (isAndroid ? "140" : "140"),
-          buildver: initial.get("buildver") || Date.now().toString().substr(0, 10),
-          osver: initial.get("osver") || (isAndroid ? "9" : "16.2"),
-          deviceId,
-          sDeviceId: initial.get("sDeviceId") || deviceId,
-          channel: initial.get("channel") || (isAndroid ? "xiaomi" : "distribution"),
-          mobilename: initial.get("mobilename") || (isAndroid ? "SM-G977N" : ""),
-          resolution: initial.get("resolution") || "1920x1080",
-          __csrf: initial.get("__csrf") || ""
-        };
-      }
-      function chooseEapiUserAgent(os) {
-        if (os === "android") {
-          return "NeteaseMusic/9.5.45(9005045);Dalvik/2.1.0 (Linux; U; Android 9; SM-G977N Build/LMY48Z)";
-        }
-        if (os === "iphone" || os === "ios") {
-          return "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)";
-        }
-        return "NeteaseMusic/9.5.45(9005045);Dalvik/2.1.0 (Linux; U; Android 9; SM-G977N Build/LMY48Z)";
-      }
-      async function fetchEapiEndpoint(cookie, apiPath) {
-        const request = require_browserRequest();
-        const eapiCookie = buildEapiCookie(cookie);
-        const ua = chooseEapiUserAgent(eapiCookie.os);
-        const res = await request("POST", `https://interface.music.163.com${apiPath}`, {}, {
-          crypto: "eapi",
-          cookie: eapiCookie,
-          url: apiPath,
-          ua
-        });
-        return res.body;
-      }
-      async function fetchEapiUserAccount(cookie) {
-        const endpoints = [
-          "/api/nuser/account/get",
-          "/api/w/nuser/account/get"
-        ];
-        for (const ep of endpoints) {
-          try {
-            const body = await fetchEapiEndpoint(cookie, ep);
-            if (body && (body.code === 200 || body.account || body.profile)) {
-              return body;
-            }
-          } catch {
-          }
-        }
-        throw new Error("eapi user account fetch failed");
-      }
       async function getLoginProfile(cookie) {
         const initial = parseCookieString(cookie);
         if (!initial.get("MUSIC_U") && !initial.get("MUSIC_A")) {
           throw new Error("Cookie \u65E0\u6548\uFF0C\u8BF7\u786E\u4FDD\u5305\u542B MUSIC_U \u6216 MUSIC_A \u5B57\u6BB5");
         }
-        const hasAppDevice = Boolean(initial.get("deviceId") || initial.get("sDeviceId"));
-        const hasMusicU = Boolean(initial.get("MUSIC_U"));
-        let cookieString = withOsPc(normalizeCookie(cookie));
-        let profile = { loggedIn: false };
-
-        try {
-          let res = await login_status({ cookie: cookieString });
+        let cookieString = initial.get("MUSIC_A") && !initial.get("MUSIC_U") ? cookieObjectToString({
+          ...Object.fromEntries(parseCookieString(normalizeCookie(cookie))),
+          os: initial.get("os") && initial.get("os") !== "pc" ? initial.get("os") : "android"
+        }) : withOsPc(normalizeCookie(cookie));
+        let res = await login_status({ cookie: cookieString });
+        if (Array.isArray(res.cookie) && res.cookie.length) {
+          cookieString = mergeSetCookieHeaders(cookieString, res.cookie);
+        }
+        let profile = extractProfile(res.body);
+        if (!profile.loggedIn) {
+          res = await user_account({ cookie: cookieString });
+          profile = extractProfile(res.body);
           if (Array.isArray(res.cookie) && res.cookie.length) {
             cookieString = mergeSetCookieHeaders(cookieString, res.cookie);
           }
-          profile = extractProfile(res.body);
-          if (!profile.loggedIn) {
-            res = await user_account({ cookie: cookieString });
-            profile = extractProfile(res.body);
-            if (Array.isArray(res.cookie) && res.cookie.length) {
-              cookieString = mergeSetCookieHeaders(cookieString, res.cookie);
-            }
-          }
-        } catch {
         }
-
-        if (!profile.loggedIn && hasAppDevice) {
-          try {
-            const body = await fetchEapiUserAccount(cookie);
-            const eapiProfile = extractProfile(body);
-            if (eapiProfile.loggedIn) {
-              profile = eapiProfile;
-            }
-          } catch {
-          }
-        }
-
-        if (!profile.loggedIn && (initial.get("MUSIC_A") || hasAppDevice)) {
-          try {
-            const { fetchUgcUserProfile } = require_ugc();
-            const ugcProfile = await fetchUgcUserProfile(cookie);
-            if (ugcProfile?.name || ugcProfile?.userId) {
-              return {
-                userId: ugcProfile.userId || 0,
-                nickname: ugcProfile.name || "APP \u7528\u6237",
-                avatarUrl: ugcProfile.avatar || "",
-                cookie
-              };
-            }
-          } catch {
-          }
-        }
-
-        if (!profile.loggedIn && hasAppDevice && hasMusicU) {
-          return {
-            userId: 0,
-            nickname: "APP \u7528\u6237",
-            avatarUrl: "",
-            cookie
-          };
-        }
-
         if (!profile.loggedIn) {
+          if (initial.get("MUSIC_A")) {
+            try {
+              const { fetchUgcUserProfile } = require_ugc();
+              const ugcProfile = await fetchUgcUserProfile(cookieString);
+              if (ugcProfile?.name) {
+                return {
+                  userId: ugcProfile.userId,
+                  nickname: ugcProfile.name,
+                  avatarUrl: ugcProfile.avatar || "",
+                  cookie: cookieString
+                };
+              }
+            } catch {
+            }
+          }
           throw new Error(
-            "Cookie \u5DF2\u5931\u6548\u6216\u672A\u767B\u5F55\u3002APP Cookie \u8BF7\u4ECE\u624B\u673A HAR \u91CD\u65B0\u63D0\u53D6\uFF08\u9700\u542B deviceId\uFF09\uFF1BWEB Cookie \u8BF7\u5728 music.163.com \u767B\u5F55\u540E\u590D\u5236"
+            "Cookie \u5DF2\u5931\u6548\u6216\u672A\u767B\u5F55\u3002\u8BF7\u786E\u8BA4\uFF1A1) \u5728 music.163.com \u7F51\u9875\u767B\u5F55 2) \u590D\u5236\u5B8C\u6574 Cookie 3) Cookie \u672A\u8FC7\u671F"
           );
         }
-
         cookieString = await ensureCsrfCookie(cookieString);
-        if (hasAppDevice) {
-          const keep = parseCookieString(cookie);
-          const out = parseCookieString(cookieString);
-          for (const key of ["MUSIC_U", "MUSIC_A", "deviceId", "sDeviceId", "os", "appver", "channel"]) {
-            if (keep.get(key)) out.set(key, keep.get(key));
-          }
-          cookieString = cookieObjectToString(Object.fromEntries(out));
-        }
         return {
           userId: profile.userId,
           nickname: profile.nickname,
           avatarUrl: profile.avatarUrl,
-          cookie: hasAppDevice ? cookie : cookieString
+          cookie: cookieString
         };
       }
       async function addTracksToPlaylist(cookieString, playlistId, songIds) {
@@ -32213,11 +31371,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
         startUgcExam,
         fetchUgcExamQuestion,
         submitUgcExamAnswer,
-        startVoteAudit,
-        fetchVoteAuditList,
-        submitVoteAudit,
-        fetchVoteAuditHistory,
-        fetchUgcTagAuditGuides,
         fetchCachalotProductList,
         fetchLotteryPool,
         fetchLotteryRemainChance,
@@ -32876,34 +32029,6 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7cl
           if (m === "POST" && pathname === "/api/ugc/exam/submit") {
             const data = await submitUgcExamAnswer(body?.cookie, body || {});
             return ok({ ok: true, ...data });
-          }
-          if (m === "POST" && pathname === "/api/ugc/audit/start") {
-            if (!body?.cookie) throw new Error("\u8BF7\u5148\u767B\u5F55");
-            if (body?.auditType == null || body?.auditType === "") {
-              throw new Error("\u7F3A\u5C11\u5BA1\u6838\u7C7B\u578B auditType");
-            }
-            const data = await startVoteAudit(body.cookie, body || {});
-            return ok({ ok: true, ...data });
-          }
-          if (m === "POST" && pathname === "/api/ugc/audit/list") {
-            if (!body?.cookie) throw new Error("\u8BF7\u5148\u767B\u5F55");
-            const data = await fetchVoteAuditList(body.cookie, body || {});
-            return ok({ ok: true, ...data });
-          }
-          if (m === "POST" && pathname === "/api/ugc/audit/submit") {
-            if (!body?.cookie) throw new Error("\u8BF7\u5148\u767B\u5F55");
-            const data = await submitVoteAudit(body.cookie, body || {});
-            return ok({ ok: true, ...data });
-          }
-          if (m === "POST" && pathname === "/api/ugc/audit/history") {
-            if (!body?.cookie) throw new Error("\u8BF7\u5148\u767B\u5F55");
-            const data = await fetchVoteAuditHistory(body.cookie, body || {});
-            return ok({ ok: true, ...data });
-          }
-          if (m === "POST" && pathname === "/api/ugc/audit/guides") {
-            if (!body?.cookie) throw new Error("\u8BF7\u5148\u767B\u5F55");
-            const guides = await fetchUgcTagAuditGuides(body.cookie);
-            return ok({ ok: true, guides });
           }
           if (m === "POST" && pathname === "/api/ugc/integration/records") {
             const data = await fetchIntegrationRecords(body?.cookie, body || {});
