@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="icons/icon32.png" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="popup-header">
+    <img class="popup-logo" src="icons/icon48.png" alt="" width="40" height="40" />
+    <div>
+      <h1>网易云乐谱</h1>
+      <p>Cookie 助手</p>
+    </div>
+  </header>
+
+  <p id="status" class="status">检测中…</p>
+
+  <div class="popup-actions">
+    <button id="openAppBtn" type="button" class="btn-primary">打开乐谱工具</button>
+    <button id="copyBtn" type="button" class="btn-secondary">复制 Cookie</button>
+    <button id="qrLoginBtn" type="button" class="btn-secondary">扫码登录</button>
+    <button id="refreshBtn" type="button" class="btn-ghost">重新检测</button>
+  </div>
+
+  <!-- 二维码登录弹窗 -->
+  <div id="qrModal" class="qr-modal" style="display:none">
+    <div class="qr-modal-content">
+      <button id="qrCloseBtn" class="qr-close" type="button">&times;</button>
+      <h3>扫码登录</h3>
+      <p class="qr-hint">请使用网易云音乐 APP 扫描二维码</p>
+      <div id="qrCodeWrap" class="qr-code-wrap">
+        <img id="qrCodeImg" src="" alt="二维码" width="180" height="180" />
+        <div id="qrOverlay" class="qr-overlay" style="display:none">
+          <span id="qrOverlayText">二维码已过期</span>
+          <button id="qrRefreshBtn" type="button" class="btn-primary btn-sm">刷新二维码</button>
+        </div>
+      </div>
+      <p id="qrStatus" class="qr-status">正在获取二维码…</p>
+      <div id="qrSuccess" class="qr-success" style="display:none">
+        <p class="qr-success-icon">&#10003;</p>
+        <p id="qrNickname" class="qr-nickname"></p>
+      </div>
+    </div>
+  </div>
+
+  <label class="toggle">
+    <input type="checkbox" id="autoCopy" checked />
+    登录后自动复制 Cookie
+  </label>
+
+  <p class="hint">
+    在 <a href="https://music.163.com" target="_blank" rel="noopener">music.163.com</a> 登录后使用。
+    云小编 / 商城 / 抽奖建议用 APP 抓包 Cookie。
+  </p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
