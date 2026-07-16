@@ -4,34 +4,55 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/png" href="icons/icon32.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400;1,9..144,600;1,9..144,700;1,9..144,900&family=Noto+Serif+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <div class="popup-masthead">
+    <span class="popup-masthead-meta">ISSUE №01</span>
+    <span class="popup-masthead-divider">·</span>
+    <span class="popup-masthead-meta">THE SCORE</span>
+  </div>
+
   <header class="popup-header">
-    <img class="popup-logo" src="icons/icon48.png" alt="" width="40" height="40" />
-    <div>
-      <h1>网易云乐谱</h1>
-      <p>Cookie 助手</p>
+    <div class="popup-brand-mark" aria-hidden="true">
+      <img src="icons/icon48.png" alt="" width="32" height="32" />
+    </div>
+    <div class="popup-brand-copy">
+      <h1 class="popup-brand-zh">网易云乐谱</h1>
+      <p class="popup-brand-en">COOKIE ASSISTANT</p>
     </div>
   </header>
 
-  <p id="status" class="status">检测中…</p>
-
-  <div class="popup-actions">
-    <button id="openAppBtn" type="button" class="btn-primary">打开乐谱工具</button>
-    <button id="copyBtn" type="button" class="btn-secondary">复制 Cookie</button>
-    <button id="refreshBtn" type="button" class="btn-ghost">重新检测</button>
+  <div class="popup-section">
+    <div class="popup-section-kicker">STATUS</div>
+    <p id="status" class="status">检测中…</p>
   </div>
 
-  <label class="toggle">
-    <input type="checkbox" id="autoCopy" checked />
-    登录后自动复制 Cookie
-  </label>
+  <div class="popup-section">
+    <div class="popup-section-kicker">ACTIONS</div>
+    <div class="popup-actions">
+      <button id="openAppBtn" type="button" class="btn-primary">打开乐谱工具</button>
+      <button id="copyBtn" type="button" class="btn-secondary">复制 Cookie</button>
+      <button id="refreshBtn" type="button" class="btn-ghost">重新检测</button>
+    </div>
+  </div>
 
-  <p class="hint">
-    在 <a href="https://music.163.com" target="_blank" rel="noopener">music.163.com</a> 登录后使用。
-    云小编 / 商城 / 抽奖建议用 APP 抓包 Cookie。
-  </p>
+  <div class="popup-section">
+    <label class="toggle">
+      <input type="checkbox" id="autoCopy" checked />
+      <span class="toggle-label">登录后自动复制 Cookie</span>
+    </label>
+  </div>
+
+  <footer class="popup-footer">
+    <p class="hint">
+      在 <a href="https://music.163.com" target="_blank" rel="noopener">music.163.com</a> 登录后使用。
+      云小编 / 商城 / 抽奖建议用 APP 抓包 Cookie。
+    </p>
+  </footer>
 
   <script src="popup.js"></script>
 </body>

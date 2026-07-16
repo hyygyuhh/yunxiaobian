@@ -3,27 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网易云乐谱列表</title>
+  <title>网易云乐谱 · SHEET MUSIC</title>
   <link rel="icon" type="image/png" href="/favicon.png?v=2" />
   <link rel="apple-touch-icon" href="/favicon.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400;1,9..144,600;1,9..144,700;1,9..144,900&family=Noto+Serif+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=ext" />
 </head>
 <body>
   <header class="site-header">
+    <div class="masthead">
+      <div class="masthead-inner">
+        <span class="masthead-meta">ISSUE №01</span>
+        <span class="masthead-divider">·</span>
+        <span class="masthead-meta">SHEET MUSIC QUARTERLY</span>
+        <span class="masthead-divider">·</span>
+        <span class="masthead-meta" id="mastheadDate"></span>
+      </div>
+    </div>
     <div class="header-inner">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
           <img src="favicon.png" alt="" width="36" height="36" />
         </div>
         <div class="brand-copy">
-          <h1>网易云乐谱</h1>
+          <h1><span class="brand-zh">网易云乐谱</span><span class="brand-en">THE SCORE</span></h1>
           <p>查乐谱 · 预览 · 百科 · 贡献积分</p>
         </div>
       </div>
       <nav class="tabs" role="tablist">
-        <button type="button" class="tab active" data-tab="analyze" role="tab" aria-selected="true">乐谱分析</button>
-        <button type="button" class="tab" data-tab="sheet" role="tab" aria-selected="false">乐谱管理</button>
-        <button type="button" class="tab" data-tab="ugc" role="tab" aria-selected="false">云小编</button>
+        <button type="button" class="tab active" data-tab="analyze" role="tab" aria-selected="true">
+          <span class="tab-num">01</span>
+          <span class="tab-label">乐谱分析</span>
+        </button>
+        <button type="button" class="tab" data-tab="sheet" role="tab" aria-selected="false">
+          <span class="tab-num">02</span>
+          <span class="tab-label">乐谱管理</span>
+        </button>
+        <button type="button" class="tab" data-tab="ugc" role="tab" aria-selected="false">
+          <span class="tab-num">03</span>
+          <span class="tab-label">云小编</span>
+        </button>
       </nav>
       <div id="loginPanel" class="login-panel">
         <div id="loginGuest">
@@ -36,6 +57,7 @@
         </div>
       </div>
     </div>
+    <div class="header-bottom-rule"></div>
   </header>
 
   <div class="page">
@@ -44,6 +66,7 @@
       <div class="card search-card">
         <div class="card-head">
           <div>
+            <div class="section-kicker">FEATURED</div>
             <h2 class="card-title">查询乐谱</h2>
             <p class="card-desc" id="modeDesc">粘贴歌曲、歌单、专辑或歌手链接</p>
           </div>
@@ -203,6 +226,7 @@
       <div class="card">
         <div class="panel-body">
           <div class="section-head">
+            <div class="section-kicker">ARCHIVE</div>
             <h2 class="panel-title">乐谱管理</h2>
             <p class="section-desc">提交 PDF 上传乐谱；已上传列表在「我的贡献 → 类型：乐谱上传」中查看</p>
           </div>
@@ -325,6 +349,7 @@
         <div class="panel-body">
           <div class="section-head section-head-row">
             <div>
+              <div class="section-kicker">CULTURE</div>
               <h2 class="panel-title">音乐云小编</h2>
               <p class="section-desc">积分、审核任务、每日会员奖励、积分商城与抽奖</p>
             </div>
