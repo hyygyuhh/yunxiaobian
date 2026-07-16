@@ -4,6 +4,21 @@ const copyBtn = document.getElementById('copyBtn')
 const refreshBtn = document.getElementById('refreshBtn')
 const autoCopyEl = document.getElementById('autoCopy')
 
+const THEME_STORAGE_KEY = 'ne_theme'
+
+function initTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+initTheme()
+
 function setStatus(text, type = '') {
   statusEl.textContent = text
   statusEl.className = `status ${type}`

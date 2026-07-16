@@ -1,13 +1,30 @@
-:root {
-  --ncm-red: #c20c0c;
-  --ncm-red-hover: #a80909;
-  --bg: #f5f5f5;
+:root,
+[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: #161616;
+  --ncm-red: #e60012;
+  --ncm-red-hover: #cc000f;
+  --ncm-red-soft: rgba(230, 0, 18, 0.08);
+  --text: #e8e8e8;
+  --text-light: #999999;
+  --border: #262626;
+  --hairline: #1f1f1f;
+  --green: #4caf50;
+  --danger: #e57373;
+}
+
+[data-theme="light"] {
+  --bg: #fafaf7;
   --surface: #ffffff;
-  --border: #e8e8e8;
-  --text: #333333;
-  --muted: #888888;
-  --green: #59b26a;
-  --danger: #e34d4d;
+  --ncm-red: #cc000f;
+  --ncm-red-hover: #b3000d;
+  --ncm-red-soft: rgba(204, 0, 15, 0.06);
+  --text: #1a1a1a;
+  --text-light: #666666;
+  --border: #e5e5e0;
+  --hairline: #f0f0eb;
+  --green: #2e7d32;
+  --danger: #c62828;
 }
 
 * {
@@ -18,24 +35,27 @@ body {
   width: 320px;
   margin: 0;
   padding: 16px;
-  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-family: "Noto Serif SC", "PingFang SC", "Microsoft YaHei", serif;
   background: var(--bg);
   color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .popup-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--hairline);
 }
 
 .popup-logo {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 2px;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(194, 12, 12, 0.25);
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.3);
 }
 
 .popup-header h1 {
@@ -43,53 +63,58 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: 0.5px;
 }
 
 .popup-header p {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-light);
+  font-style: italic;
+  font-family: "Fraunces", Georgia, serif;
 }
 
 .status {
-  margin: 0 0 14px;
-  padding: 10px 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
+  line-height: 1.6;
+  color: var(--text-light);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   white-space: pre-wrap;
+  transition: all 0.25s ease;
 }
 
 .status.ok {
-  color: #2f8f47;
-  background: rgba(89, 178, 106, 0.08);
-  border-color: rgba(89, 178, 106, 0.25);
+  color: var(--green);
+  background: var(--ncm-red-soft);
+  border-color: rgba(76, 175, 80, 0.25);
 }
 
 .status.error {
   color: var(--danger);
-  background: rgba(227, 77, 77, 0.08);
-  border-color: rgba(227, 77, 77, 0.2);
+  background: var(--ncm-red-soft);
+  border-color: rgba(229, 115, 115, 0.25);
 }
 
 .popup-actions {
   display: grid;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 button {
   border: none;
-  border-radius: 999px;
+  border-radius: 2px;
   padding: 10px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s ease, opacity 0.2s ease;
+  transition: all 0.25s ease;
+  letter-spacing: 0.3px;
 }
 
 .btn-primary {
@@ -99,6 +124,7 @@ button {
 
 .btn-primary:hover:not(:disabled) {
   background: var(--ncm-red-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -108,46 +134,54 @@ button {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #fafafa;
+  border-color: var(--ncm-red);
+  color: var(--ncm-red);
 }
 
 .btn-ghost {
-  color: var(--muted);
+  color: var(--text-light);
   background: transparent;
 }
 
 .btn-ghost:hover:not(:disabled) {
   color: var(--text);
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--surface);
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .toggle {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: var(--muted);
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-light);
   cursor: pointer;
+}
+
+.toggle input {
+  accent-color: var(--ncm-red);
 }
 
 .hint {
   margin: 0;
   font-size: 12px;
-  line-height: 1.55;
-  color: var(--muted);
+  line-height: 1.6;
+  color: var(--text-light);
 }
 
 .hint a {
   color: var(--ncm-red);
   text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
 }
 
 .hint a:hover {
-  text-decoration: underline;
+  border-color: var(--ncm-red);
 }

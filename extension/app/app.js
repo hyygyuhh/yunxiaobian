@@ -169,11 +169,37 @@ const mallModalFooter = document.getElementById('mallModalFooter')
 const mallModalBackBtn = document.getElementById('mallModalBackBtn')
 const closeMallModalBtn = document.getElementById('closeMallModalBtn')
 const ugcOpenMallModalBtn = document.getElementById('ugcOpenMallModalBtn')
-const tabButtons = document.querySelectorAll('.tab')
+const tabButtons = document.querySelectorAll('.sidebar-nav-item')
 const backToTopBtn = document.getElementById('backToTopBtn')
 const ugcRefreshAllBtn = document.getElementById('ugcRefreshAllBtn')
 
 const TAB_STORAGE_KEY = 'ne_active_tab'
+const THEME_STORAGE_KEY = 'ne_theme'
+
+function initTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  } catch {
+    // ignore
+  }
+
+  const toggleBtn = document.getElementById('themeToggleBtn')
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme')
+      const next = current === 'light' ? 'dark' : 'light'
+      document.documentElement.setAttribute('data-theme', next)
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+      } catch {
+        // ignore
+      }
+    })
+  }
+}
 const UGC_SECTION_IDS = [
   'ugcSectionOverview',
   'ugcSectionReward',
@@ -4655,6 +4681,7 @@ window.addEventListener('ne-extension-cookie', (e) => {
 })
 
 async function initApp() {
+  initTheme()
   syncFilterInputs()
   updateAnalyzeButtonLabel()
   syncFilterSectionVisibility()
