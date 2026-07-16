@@ -135,6 +135,11 @@ const ugcHonorRoll = document.getElementById('ugcHonorRoll')
 const ugcExamPanel = document.getElementById('ugcExamPanel')
 const ugcExamContent = document.getElementById('ugcExamContent')
 const ugcExamCloseBtn = document.getElementById('ugcExamCloseBtn')
+const ugcExamPanelTitle = document.getElementById('ugcExamPanelTitle')
+const ugcAuditHistory = document.getElementById('ugcAuditHistory')
+const ugcAuditHistorySummary = document.getElementById('ugcAuditHistorySummary')
+const ugcRefreshAuditHistoryBtn = document.getElementById('ugcRefreshAuditHistoryBtn')
+const ugcAuditHistoryCollapse = document.getElementById('ugcAuditHistoryCollapse')
 const ugcClaimVipBtn = document.getElementById('ugcClaimVipBtn')
 const ugcIntegration = document.getElementById('ugcIntegration')
 const ugcLottery = document.getElementById('ugcLottery')
@@ -187,6 +192,7 @@ let inputMode = 'link'
 let ugcOffset = 0
 let ugcDashboard = null
 let ugcExamState = null
+let ugcAuditHistoryLoaded = false
 let ugcHonorType = 0
 let userPlaylists = []
 let sheetUploadOffset = 0
@@ -509,9 +515,99 @@ function setCookie(cookie) {
   if (cookie) localStorage.setItem(COOKIE_KEY, cookie)
 }
 
+/** Update stored cookie without dropping APP deviceId / android fields. */
+function setCookieMerged(nextCookie) {
+  if (!nextCookie) return
+  const current = getCookie()
+  if (current && (/(?:^|;\s*)deviceId=/i.test(current) || /(?:^|;\s*)sDeviceId=/i.test(current))) {
+    setCookie(mergePreservingAppCookie(current, nextCookie))
+  } else {
+    setCookie(nextCookie)
+  }
+}
+
 function clearCookie() {
   localStorage.removeItem(COOKIE_KEY)
   clearLoginProfileCache()
+}
+
+function sanitizeCookieInput(raw) {
+  let text = String(raw || '')
+    .trim()
+    .replace(/^cookie:\s*/i, '')
+
+  text = text.replace(/\r\n/g, '\n')
+  text = text.replace(/\n(?=[A-Za-z_][A-Za-z0-9_]*=)/g, '; ')
+  text = text.replace(/[\r\n\t]+/g, '')
+
+  text = text
+    .replace(/\s*;\s*/g, '; ')
+    .replace(/^;\s*|;\s*$/g, '')
+    .trim()
+
+  const xMusicU = text.match(/(?:^|[;\s])x-music-u[=:]\s*([A-Za-z0-9]+)/i)
+  if (xMusicU && !/(?:^|;)\s*MUSIC_U=/i.test(text)) {
+    text = `${text}; MUSIC_U=${xMusicU[1]}`
+  }
+
+  return text
+}
+
+function parseCookiePairs(raw) {
+  const map = new Map()
+  for (const part of String(raw || '').split(';')) {
+    const segment = part.trim()
+    if (!segment) continue
+    const eq = segment.indexOf('=')
+    if (eq <= 0) continue
+    map.set(segment.slice(0, eq).trim(), segment.slice(eq + 1).trim())
+  }
+  return map
+}
+
+function cookiePairsToString(map) {
+  return [...map.entries()]
+    .filter(([k, v]) => k && v != null && v !== '')
+    .map(([k, v]) => `${k}=${v}`)
+    .join('; ')
+}
+
+function isAppCookieString(raw) {
+  const text = String(raw || '')
+  return /(?:^|;\s*)deviceId=/i.test(text) || /(?:^|;\s*)sDeviceId=/i.test(text)
+}
+
+/** Keep APP xeapi fields from the pasted cookie; never let web login wipe MUSIC_U. */
+function mergePreservingAppCookie(pasted, serverCookie) {
+  const original = parseCookiePairs(sanitizeCookieInput(pasted))
+  const server = parseCookiePairs(serverCookie || '')
+  const hasAppDevice = original.has('deviceId') || original.has('sDeviceId')
+  if (!hasAppDevice) {
+    return cookiePairsToString(server.size ? server : original) || String(pasted || '').trim()
+  }
+
+  // Lock APP identity tokens. Web login_status Set-Cookie / PC normalize often returns
+  // a different (or empty) MUSIC_U and forces os=pc — that marks cookie「失效」for xeapi.
+  for (const key of ['__csrf', 'NMTID']) {
+    if (server.has(key) && server.get(key)) original.set(key, server.get(key))
+  }
+  return cookiePairsToString(original)
+}
+
+function getCookiePasteStats(raw) {
+  const sanitized = sanitizeCookieInput(raw)
+  const musicU = sanitized.match(/(?:^|;\s*)MUSIC_U=([^;]+)/i)?.[1] || ''
+  const musicA = sanitized.match(/(?:^|;\s*)MUSIC_A=([^;]+)/i)?.[1] || ''
+  const deviceId = sanitized.match(/(?:^|;\s*)deviceId=([^;]+)/i)?.[1] || ''
+  const sDeviceId = sanitized.match(/(?:^|;\s*)sDeviceId=([^;]+)/i)?.[1] || ''
+  return {
+    length: sanitized.length,
+    musicULength: musicU.length,
+    musicALength: musicA.length,
+    hasMusicU: Boolean(musicU),
+    hasMusicA: Boolean(musicA),
+    hasDeviceId: Boolean(deviceId || sDeviceId),
+  }
 }
 
 function cacheLoginProfile(data = {}) {
@@ -636,6 +732,9 @@ function scrollToUgcSection(id, options = {}) {
   if (options.openMallModal && id === 'ugcSectionMall') {
     if (ugcDashboard?.mall) openMallModal('list')
     else if (getCookie()) loadUgcMall().then(() => openMallModal('list'))
+  }
+  if (id === 'ugcSectionAuditHistory' && getCookie() && !ugcAuditHistoryLoaded) {
+    loadUgcAuditHistory()
   }
 }
 
@@ -1798,6 +1897,7 @@ function renderUgcHonorRoll(records = [], typeName = '', options = {}) {
 
 function renderUgcExamQuestion(state = {}) {
   if (!ugcExamPanel || !ugcExamContent) return
+  if (ugcExamPanelTitle) ugcExamPanelTitle.textContent = '资格测验'
   const q = state.question || {}
   const progress = q.auditCount != null && q.auditTaskCount != null
     ? `${q.auditCount}/${q.auditTaskCount}`
@@ -1861,6 +1961,191 @@ function renderUgcExamQuestion(state = {}) {
       })
     })
   })
+}
+
+function voteJudgementLabel(j) {
+  if (Number(j) === 1) return '同意'
+  if (Number(j) === 2) return '不同意'
+  return `判定${j ?? '—'}`
+}
+
+function voteHistoryStatusLabel(s) {
+  if (Number(s) === 1) return '得分'
+  if (Number(s) === 3) return '未得分'
+  return `状态${s ?? '—'}`
+}
+
+function renderUgcVoteAudit(state = {}) {
+  if (!ugcExamPanel || !ugcExamContent) return
+  if (ugcExamPanelTitle) ugcExamPanelTitle.textContent = '正在审核'
+
+  const items = Array.isArray(state.queue) ? state.queue : []
+  const index = state.index || 0
+  const item = items[index]
+  const guides = Array.isArray(state.guides) ? state.guides : []
+  const lastResult = state.lastResult
+
+  if (!item) {
+    ugcExamContent.innerHTML = `
+      <div class="ugc-exam-card">
+        <p class="hint">${escapeHtml(state.message || '暂无待审核歌曲')}</p>
+        <div class="ugc-exam-actions">
+          <button id="ugcVoteReloadBtn" type="button" class="btn-primary">重新拉取</button>
+        </div>
+        <p id="ugcExamStatus" class="hint"></p>
+      </div>
+    `
+    ugcExamPanel.classList.remove('hidden')
+    document.getElementById('ugcVoteReloadBtn')?.addEventListener('click', () => {
+      startUgcAudit(state.auditType, state.auditTypeName)
+    })
+    return
+  }
+
+  const progress =
+    item.auditCount != null && item.auditTaskCount != null
+      ? `${item.auditCount}/${item.auditTaskCount}`
+      : ''
+  const queueProgress = items.length > 1 ? `本批 ${index + 1}/${items.length}` : ''
+  const currentGuide = guides.find((g) => String(g.tagId) === String(item.tagId))
+  const guidesHtml = guides.length
+    ? `<aside class="ugc-tag-guides">
+        <div class="ugc-tag-guides-head">
+          <strong>标签参考</strong>
+          <span class="hint">共 ${guides.length} 个</span>
+        </div>
+        <div class="ugc-tag-guide-list">
+          ${guides
+            .map((guide) => {
+              const example = guide.examples?.[0]
+              const active = String(guide.tagId) === String(item.tagId)
+              return `
+                <article class="ugc-tag-guide-item${active ? ' active' : ''}">
+                  <div class="ugc-tag-guide-head">
+                    <strong>${escapeHtml(guide.tagName || '')}</strong>
+                    ${active ? '<span class="badge">当前</span>' : ''}
+                  </div>
+                  <p class="hint">${escapeHtml(guide.guideText || '')}</p>
+                  ${
+                    example
+                      ? `<div class="ugc-tag-guide-example">
+                          ${example.picUrl ? `<img src="${escapeHtml(example.picUrl)}" alt="" loading="lazy" />` : ''}
+                          <div>
+                            <strong>${escapeHtml(example.songName || '')}</strong>
+                            <span class="hint">${escapeHtml((example.artistName || []).join(' / '))}</span>
+                          </div>
+                        </div>`
+                      : ''
+                  }
+                </article>
+              `
+            })
+            .join('')}
+        </div>
+      </aside>`
+    : ''
+
+  const resultHtml = lastResult
+    ? `<div class="ugc-vote-result">
+        <p><strong>${lastResult.success ? '提交成功' : '已提交'}</strong>
+          ${lastResult.points != null ? ` · 本次 +${lastResult.points} 分` : ''}
+        </p>
+        ${lastResult.errorAnalysis ? `<p class="hint">${escapeHtml(lastResult.errorAnalysis)}</p>` : ''}
+        ${
+          lastResult.dayErrorNum != null
+            ? `<p class="hint">今日错误 ${lastResult.dayErrorNum}${
+                lastResult.dayErrorNumStandard != null ? ` / ${lastResult.dayErrorNumStandard}` : ''
+              }${lastResult.dayErrorNumLimit ? '（已达上限）' : ''}</p>`
+            : ''
+        }
+        ${lastResult.message ? `<p class="hint">${escapeHtml(lastResult.message)}</p>` : ''}
+        <button id="ugcVoteNextBtn" type="button" class="btn-primary">
+          ${index < items.length - 1 ? '下一首' : '继续拉取'}
+        </button>
+      </div>`
+    : `<div class="ugc-vote-judge">
+        <p class="ugc-exam-prompt">请判定初始标签是否正确</p>
+        <div class="ugc-vote-actions">
+          <button type="button" class="ugc-vote-btn pass" data-judgement="1">
+            <strong>同意</strong>
+            <span>标签正确</span>
+          </button>
+          <button type="button" class="ugc-vote-btn reject" data-judgement="2">
+            <strong>不同意</strong>
+            <span>标签错误</span>
+          </button>
+        </div>
+        <p class="hint">听歌后判断「${escapeHtml(item.initResult || '该标签')}」是否贴切</p>
+      </div>`
+
+  ugcExamContent.innerHTML = `
+    <div class="ugc-vote-layout${guidesHtml ? '' : ' no-guides'}">
+      <div class="ugc-exam-card ugc-vote-main">
+        <div class="ugc-exam-head">
+          <strong>${escapeHtml(state.auditTypeName || '投票审核')}</strong>
+          <span class="hint">${[queueProgress, progress ? `活动 ${progress}` : '', item.points != null ? `积分 ${item.points}` : '']
+            .filter(Boolean)
+            .join(' · ')}</span>
+        </div>
+        <div class="ugc-exam-song">
+          ${item.coverUrl ? `<img src="${escapeHtml(item.coverUrl)}" alt="" loading="lazy" />` : ''}
+          <div>
+            <strong>${escapeHtml(item.resName || '未知歌曲')}</strong>
+            <p class="hint">${escapeHtml(item.artists || '')}</p>
+            ${item.songUrl ? `<audio controls preload="none" src="${escapeHtml(item.songUrl)}"></audio>` : '<p class="hint">暂无试听地址</p>'}
+          </div>
+        </div>
+        <div class="ugc-init-tag">
+          <span class="hint">初始判定</span>
+          <strong>${escapeHtml(item.initResult || '无')}</strong>
+          ${item.tagId != null ? `<span class="hint">tagId ${escapeHtml(String(item.tagId))}</span>` : ''}
+          ${currentGuide?.guideText ? `<p class="hint ugc-init-guide">${escapeHtml(currentGuide.guideText)}</p>` : ''}
+        </div>
+        ${item.lyric ? `<pre class="ugc-exam-lyric">${escapeHtml(String(item.lyric).slice(0, 1200))}</pre>` : ''}
+        ${resultHtml}
+        <p id="ugcExamStatus" class="hint"></p>
+      </div>
+      ${guidesHtml}
+    </div>
+  `
+  ugcExamPanel.classList.remove('hidden')
+  ugcExamPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+  ugcExamContent.querySelectorAll('.ugc-vote-btn').forEach((btn) => {
+    btn.addEventListener('click', () => submitUgcVoteJudgement(Number(btn.dataset.judgement)))
+  })
+  document.getElementById('ugcVoteNextBtn')?.addEventListener('click', advanceUgcVoteQueue)
+}
+
+function renderUgcAuditHistory(records = [], total = 0) {
+  if (!ugcAuditHistory) return
+  if (ugcAuditHistorySummary) {
+    ugcAuditHistorySummary.textContent = total ? `共 ${total} 条` : records.length ? `${records.length} 条` : '暂无记录'
+  }
+  if (!records.length) {
+    ugcAuditHistory.innerHTML = emptyState('暂无审核历史', '○')
+    return
+  }
+  ugcAuditHistory.innerHTML = records
+    .map(
+      (item) => `
+        <article class="ugc-audit-history-item">
+          ${item.imgUrl ? `<img src="${escapeHtml(item.imgUrl)}" alt="" loading="lazy" />` : ''}
+          <div class="ugc-audit-history-main">
+            <strong>${escapeHtml(item.resName || '未知歌曲')}</strong>
+            <p class="hint">${escapeHtml(item.artists || '')}</p>
+            <p class="ugc-meta">
+              <span class="badge">${escapeHtml(item.initJudgement || '—')}</span>
+              <span>${escapeHtml(voteJudgementLabel(item.userJudgement))}</span>
+              <span>${escapeHtml(voteHistoryStatusLabel(item.status))}</span>
+              ${item.points != null ? `<span>+${item.points}</span>` : ''}
+              ${item.time ? `<span>${escapeHtml(item.time)}</span>` : ''}
+            </p>
+          </div>
+        </article>
+      `,
+    )
+    .join('')
 }
 
 function renderUgcStats(data) {
@@ -2087,29 +2372,87 @@ async function claimUgcVipReward() {
   }
 }
 
-async function startUgcExam(auditType, auditTypeName) {
+async function startUgcExamFallback(auditType, auditTypeName) {
   const cookie = getCookie()
   if (!cookie) return
 
+  const start = await fetchPostApi('/api/ugc/exam/start', { cookie, auditType })
+  if (!start.taskId) {
+    throw new Error(formatClientError(start.raw, '无法开始审核，请稍后再试'))
+  }
+  ugcExamState = {
+    mode: 'exam',
+    auditType,
+    auditTypeName,
+    taskId: start.taskId,
+  }
+  await loadUgcExamQuestion()
+}
+
+async function startUgcAudit(auditType, auditTypeName) {
+  const cookie = getCookie()
+  if (!cookie) {
+    showToast('请先 Cookie 登录', 'error')
+    return
+  }
+
+  if (ugcExamContent) ugcExamContent.innerHTML = emptyState('正在加载审核任务…', '…')
+  ugcExamPanel?.classList.remove('hidden')
+  if (ugcExamPanelTitle) ugcExamPanelTitle.textContent = '正在审核'
+
   try {
-    const start = await fetchPostApi('/api/ugc/exam/start', { cookie, auditType })
-    if (!start.taskId) {
-      throw new Error(formatClientError(start.raw, '无法开始审核，请稍后再试'))
-    }
+    await ensureServerReady(['ugc'])
+    const activityId = ugcDashboard?.activity?.activityId
+    const data = await fetchPostApi('/api/ugc/audit/start', {
+      cookie,
+      auditType,
+      activityId,
+    })
+    const queue = Array.isArray(data.items) ? data.items : []
     ugcExamState = {
+      mode: 'vote',
       auditType,
       auditTypeName,
-      taskId: start.taskId,
+      queue,
+      index: 0,
+      guides: Array.isArray(data.guides) ? data.guides : [],
+      lastResult: null,
+      message: data.message || null,
     }
-    await loadUgcExamQuestion()
+    if (!queue.length) {
+      const needExam = ugcDashboard?.examInfo?.hasPassExamination === false
+      if (needExam) {
+        try {
+          await startUgcExamFallback(auditType, auditTypeName)
+          showToast('请先完成资格测验', 'info')
+          return
+        } catch {
+          /* fall through to empty vote panel */
+        }
+      }
+      renderUgcVoteAudit(ugcExamState)
+      return
+    }
+    renderUgcVoteAudit(ugcExamState)
   } catch (err) {
+    const needExam = ugcDashboard?.examInfo?.hasPassExamination === false
+    if (needExam) {
+      try {
+        await startUgcExamFallback(auditType, auditTypeName)
+        showToast('投票审核暂不可用，已改用资格测验', 'info')
+        return
+      } catch {
+        /* ignore */
+      }
+    }
     showToast(formatClientError(err, '开始审核失败'), 'error')
+    ugcExamPanel?.classList.add('hidden')
   }
 }
 
 async function loadUgcExamQuestion() {
   const cookie = getCookie()
-  if (!cookie || !ugcExamState?.taskId) return
+  if (!cookie || !ugcExamState?.taskId || ugcExamState.mode !== 'exam') return
 
   const statusEl = document.getElementById('ugcExamStatus')
   if (statusEl) statusEl.textContent = '正在加载题目…'
@@ -2131,7 +2474,9 @@ async function submitUgcExamAnswer(override = null) {
   const cookie = getCookie()
   const answerInput = document.getElementById('ugcExamAnswerInput')?.value?.trim()
   const statusEl = document.getElementById('ugcExamStatus')
-  if (!cookie || !ugcExamState?.taskId || !ugcExamState?.question?.questionId) return
+  if (!cookie || ugcExamState?.mode !== 'exam' || !ugcExamState?.taskId || !ugcExamState?.question?.questionId) {
+    return
+  }
 
   const payload = override || {}
   const answer = payload.answer ?? answerInput
@@ -2174,10 +2519,79 @@ async function submitUgcExamAnswer(override = null) {
   }
 }
 
+async function submitUgcVoteJudgement(judgement) {
+  const cookie = getCookie()
+  const statusEl = document.getElementById('ugcExamStatus')
+  const item = ugcExamState?.queue?.[ugcExamState.index]
+  if (!cookie || ugcExamState?.mode !== 'vote' || !item) return
+
+  ugcExamContent?.querySelectorAll('.ugc-vote-btn').forEach((btn) => {
+    btn.disabled = true
+  })
+  if (statusEl) statusEl.textContent = '正在提交判定…'
+
+  try {
+    const data = await fetchPostApi('/api/ugc/audit/submit', {
+      cookie,
+      taskId: item.taskId,
+      resId: item.resId,
+      judgement,
+      tagId: item.tagId,
+      activityId: item.activityId,
+      auditType: ugcExamState.auditType,
+      auditGoalType: item.auditGoalType,
+      initResult: item.initResult,
+    })
+    ugcExamState.lastResult = data
+    renderUgcVoteAudit(ugcExamState)
+    await loadUgcDevote()
+    ugcAuditHistoryLoaded = false
+  } catch (err) {
+    if (statusEl) statusEl.textContent = err.message || '提交失败'
+    ugcExamContent?.querySelectorAll('.ugc-vote-btn').forEach((btn) => {
+      btn.disabled = false
+    })
+  }
+}
+
+async function advanceUgcVoteQueue() {
+  if (!ugcExamState || ugcExamState.mode !== 'vote') return
+  const nextIndex = (ugcExamState.index || 0) + 1
+  if (nextIndex < (ugcExamState.queue?.length || 0)) {
+    ugcExamState.index = nextIndex
+    ugcExamState.lastResult = null
+    renderUgcVoteAudit(ugcExamState)
+    return
+  }
+  await startUgcAudit(ugcExamState.auditType, ugcExamState.auditTypeName)
+}
+
 function closeUgcExamPanel() {
   ugcExamState = null
   ugcExamPanel?.classList.add('hidden')
+  if (ugcExamPanelTitle) ugcExamPanelTitle.textContent = '正在审核'
   if (ugcExamContent) ugcExamContent.innerHTML = ''
+}
+
+async function loadUgcAuditHistory() {
+  const cookie = getCookie()
+  if (!cookie || !ugcAuditHistory) return
+
+  ugcAuditHistory.innerHTML = emptyState('正在加载审核历史…', '…')
+  if (ugcAuditHistorySummary) ugcAuditHistorySummary.textContent = '加载中…'
+  try {
+    await ensureServerReady(['ugc'])
+    const data = await fetchPostApi('/api/ugc/audit/history', {
+      cookie,
+      limit: 20,
+      offset: 0,
+    })
+    ugcAuditHistoryLoaded = true
+    renderUgcAuditHistory(data.records || [], data.total || 0)
+  } catch (err) {
+    ugcAuditHistory.innerHTML = `<p class="empty-sheets">${escapeHtml(err.message || '加载失败')}</p>`
+    if (ugcAuditHistorySummary) ugcAuditHistorySummary.textContent = '加载失败'
+  }
 }
 
 async function loadIntegrationRecords(page = 1) {
@@ -3501,7 +3915,7 @@ async function loadUserPlaylists() {
     const data = await res.json()
     if (!data.ok) throw new Error(data.error)
 
-    if (data.cookie) setCookie(data.cookie)
+    if (data.cookie) setCookieMerged(data.cookie)
     userPlaylists = data.playlists || []
 
     if (!userPlaylists.length) {
@@ -3715,7 +4129,7 @@ async function refreshLoginUI(options = {}) {
         throw new Error(formatClientError(data.error, '登录验证失败'))
       }
 
-      if (data.cookie) setCookie(data.cookie)
+      if (data.cookie) setCookieMerged(data.cookie)
       cacheLoginProfile(data)
       showLoginUserUI(data.nickname, data.avatarUrl)
 
@@ -3736,8 +4150,13 @@ async function refreshLoginUI(options = {}) {
   }
 
   if (isAuthCookieError(lastErr?.message)) {
-    clearCookie()
-    showLoginGuestUI()
+    // APP Cookie 验证失败时不自动清空：网页登出/weapi 误判时会误删本地 HAR Cookie
+    if (isAppCookieString(cookie)) {
+      applyCachedLoginUI(true)
+    } else {
+      clearCookie()
+      showLoginGuestUI()
+    }
   } else {
     applyCachedLoginUI(true)
   }
@@ -3759,14 +4178,26 @@ function closeCookieModal() {
 }
 
 async function submitCookieLogin() {
-  const cookie = cookieInput.value.trim()
+  const cookie = sanitizeCookieInput(cookieInput.value)
   if (!cookie) {
     cookieStatus.textContent = '请先粘贴 Cookie'
     return
   }
 
+  const stats = getCookiePasteStats(cookie)
+  if (!stats.hasMusicU && !stats.hasMusicA) {
+    cookieStatus.textContent = '未检测到 MUSIC_U / MUSIC_A，请粘贴完整 APP Cookie'
+    return
+  }
+  if (stats.musicULength > 0 && stats.musicULength < 850) {
+    cookieStatus.textContent = `MUSIC_U 仅 ${stats.musicULength} 字符（正常约 898），可能被截断，请重新粘贴`
+    return
+  }
+
   confirmCookieBtn.disabled = true
-  cookieStatus.textContent = '正在验证 Cookie…'
+  cookieStatus.textContent = stats.hasDeviceId
+    ? `正在验证 APP Cookie…（deviceId 已检测到，MUSIC_U ${stats.musicULength}）`
+    : `正在验证 Cookie…（未检测到 deviceId，云小编审核可能失败）`
 
   try {
     const res = await fetch('/api/login/cookie', {
@@ -3774,14 +4205,20 @@ async function submitCookieLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cookie }),
     })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error)
+    const data = await parseJsonResponse(res)
+    if (!data.ok) throw new Error(formatClientError(data.error, 'Cookie 验证失败'))
 
-    setCookie(data.cookie || cookie)
+    // Critical: do not replace APP cookie with PC-normalized login cookie
+    const saved = mergePreservingAppCookie(cookie, data.cookie)
+    setCookie(saved)
     cacheLoginProfile(data)
     closeCookieModal()
     await refreshLoginUI()
-    showSuccess(`登录成功，欢迎 ${data.nickname}`)
+    showSuccess(
+      stats.hasDeviceId
+        ? `登录成功，欢迎 ${data.nickname}（APP Cookie）`
+        : `登录成功，欢迎 ${data.nickname}`,
+    )
   } catch (err) {
     cookieStatus.textContent = err.message || 'Cookie 验证失败'
   } finally {
@@ -3841,7 +4278,7 @@ async function savePlaylistFromFilter() {
     const data = await res.json()
     if (!data.ok) throw new Error(data.error)
 
-    if (data.cookie) setCookie(data.cookie)
+    if (data.cookie) setCookieMerged(data.cookie)
 
     const playlistName =
       mode === 'existing'
@@ -4089,7 +4526,15 @@ ugcAuditTasks?.addEventListener('click', (e) => {
   const auditType = Number(btn.dataset.auditType)
   const card = btn.closest('.ugc-task-card')
   const auditTypeName = card?.querySelector('strong')?.textContent?.trim()
-  startUgcExam(auditType, auditTypeName)
+  startUgcAudit(auditType, auditTypeName)
+})
+ugcRefreshAuditHistoryBtn?.addEventListener('click', () => {
+  ugcAuditHistoryLoaded = false
+  loadUgcAuditHistory()
+})
+ugcAuditHistoryCollapse?.addEventListener('toggle', (e) => {
+  if (!e.target.open || ugcAuditHistoryLoaded) return
+  loadUgcAuditHistory()
 })
 document.querySelectorAll('.ugc-honor-tab').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -4199,6 +4644,12 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('ne-extension-cookie', (e) => {
   const cookie = e.detail?.cookie
   if (!cookie) return
+  // 已处于 APP Cookie 模式时，拒绝网页 Cookie 自动覆盖（网页退出登录后尤易踩坑）
+  if (isAppCookieString(getCookie())) {
+    console.warn('[NE] 已锁定 APP Cookie，忽略网页自动填入。如需切换请先清空本地 Cookie。')
+    showSuccess('当前为 APP Cookie 模式，已忽略网页 Cookie 自动填入')
+    return
+  }
   cookieInput.value = cookie
   submitCookieLogin()
 })

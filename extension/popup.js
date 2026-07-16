@@ -66,7 +66,7 @@ autoCopyEl.addEventListener('change', async () => {
   })
 })
 
-chrome.storage.sync.get({ autoCopy: true }, ({ autoCopy }) => {
+chrome.storage.sync.get({ autoCopy: false }, ({ autoCopy }) => {
   autoCopyEl.checked = autoCopy
 })
 

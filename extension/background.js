@@ -202,7 +202,8 @@ chrome.cookies.onChanged.addListener(async (changeInfo) => {
   if (!changeInfo.cookie.domain?.includes('163.com')) return
   if (!['MUSIC_U', '__csrf', 'MUSIC_A'].includes(changeInfo.cookie.name)) return
 
-  const { autoCopy } = await chrome.storage.sync.get({ autoCopy: true })
+  // Default off: auto-copy of web MUSIC_U confuses APP Cookie / thinktank users
+  const { autoCopy } = await chrome.storage.sync.get({ autoCopy: false })
   if (!autoCopy) return
   if (changeInfo.cookie.name !== 'MUSIC_U') return
 
@@ -232,7 +233,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GET_SETTINGS') {
-    chrome.storage.sync.get({ autoCopy: true }).then(sendResponse)
+    chrome.storage.sync.get({ autoCopy: false }).then(sendResponse)
     return true
   }
 

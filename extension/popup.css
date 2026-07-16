@@ -1,425 +1,153 @@
-/* ============================================================
-   网易云乐谱 Popup — EDITORIAL MUSIC MAGAZINE THEME
-   暗色基底 + 网易红单点强调
-   字体: Fraunces (斜体衬线·数字/英文) + Noto Serif SC (中文标题)
-   ============================================================ */
-
 :root {
-  /* Core palette — dark editorial */
-  --bg: #0a0a0a;
-  --bg-elevated: #111111;
-  --surface: #161616;
-  --surface-hover: #1c1c1c;
-  --surface-muted: #0f0f0f;
-  --surface-soft: #1a1a1a;
-
-  /* Borders & lines */
-  --border: #2a2a2a;
-  --border-light: #1f1f1f;
-  --rule: #333333;
-  --hairline: rgba(255, 255, 255, 0.06);
-
-  /* Text */
-  --text: #e8e8e8;
-  --text-muted: #9a9a9a;
-  --text-faint: #666666;
-  --text-light: #b8b8b8;
-  --text-bright: #ffffff;
-
-  /* NetEase Red — singular accent */
-  --ncm-red: #e60012;
-  --ncm-red-hover: #c20c0c;
-  --ncm-red-soft: rgba(230, 0, 18, 0.12);
-  --ncm-red-glow: rgba(230, 0, 18, 0.25);
-
-  /* Semantic colors */
-  --green: #3ea66a;
-  --green-soft: rgba(62, 166, 106, 0.12);
-  --danger: #e60012;
-  --danger-soft: rgba(230, 0, 18, 0.12);
-
-  /* Typography */
-  --font-display: 'Fraunces', 'Noto Serif SC', Georgia, serif;
-  --font-serif: 'Noto Serif SC', 'Fraunces', Georgia, 'Songti SC', serif;
-  --font-body: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', Georgia, serif;
-  --font-italic: 'Fraunces', Georgia, serif;
-
-  /* Spacing & layout */
-  --radius: 2px;
-  --radius-sm: 2px;
-  --radius-xs: 2px;
-
-  /* Effects */
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Noise texture */
-  --noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  --ncm-red: #c20c0c;
+  --ncm-red-hover: #a80909;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --border: #e8e8e8;
+  --text: #333333;
+  --muted: #888888;
+  --green: #59b26a;
+  --danger: #e34d4d;
 }
 
 * {
   box-sizing: border-box;
 }
 
-::selection {
-  background: var(--ncm-red);
-  color: #fff;
-}
-
 body {
-  width: 340px;
+  width: 320px;
   margin: 0;
-  padding: 0;
-  font-family: var(--font-body);
+  padding: 16px;
+  font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-  font-size: 13.5px;
-  position: relative;
 }
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: var(--noise);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.6;
-}
-
-/* ============================================================
-   MASTHEAD
-   ============================================================ */
-
-.popup-masthead {
-  border-bottom: 1px solid var(--hairline);
-  background: rgba(0, 0, 0, 0.4);
-  position: relative;
-  z-index: 1;
-}
-
-.popup-masthead-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 7px 16px;
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  font-weight: 400;
-}
-
-.popup-masthead-divider {
-  color: var(--ncm-red);
-  opacity: 0.6;
-}
-
-/* ============================================================
-   HEADER / BRAND
-   ============================================================ */
 
 .popup-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 20px 16px;
-  position: relative;
-  z-index: 1;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.popup-brand-mark {
+.popup-logo {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--ncm-red);
-  display: block;
   flex-shrink: 0;
-  overflow: hidden;
-  line-height: 0;
-  box-shadow: 0 0 0 2px rgba(230, 0, 18, 0.2), 0 4px 16px rgba(230, 0, 18, 0.25);
+  box-shadow: 0 2px 8px rgba(194, 12, 12, 0.25);
 }
 
-.popup-brand-mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.popup-brand-copy {
-  min-width: 0;
-  flex: 1;
-}
-
-.popup-brand-zh {
+.popup-header h1 {
   margin: 0;
-  font-family: var(--font-serif);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-bright);
-  letter-spacing: 0.04em;
-  line-height: 1.1;
+  color: var(--text);
 }
 
-.popup-brand-en {
-  margin: 3px 0 0;
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.25em;
-  color: var(--ncm-red);
-  text-transform: uppercase;
+.popup-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
 }
-
-/* ============================================================
-   SECTIONS
-   ============================================================ */
-
-.popup-section {
-  padding: 14px 20px;
-  position: relative;
-  z-index: 1;
-}
-
-.popup-section + .popup-section {
-  border-top: 1px solid var(--hairline);
-}
-
-.popup-section-kicker {
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--ncm-red);
-  margin-bottom: 8px;
-  display: inline-block;
-}
-
-.popup-section-kicker::before {
-  content: '';
-  display: inline-block;
-  width: 16px;
-  height: 1px;
-  background: var(--ncm-red);
-  margin-right: 8px;
-  vertical-align: middle;
-  opacity: 0.6;
-}
-
-/* ============================================================
-   STATUS
-   ============================================================ */
 
 .status {
-  margin: 0;
-  padding: 12px 14px;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--text-light);
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   white-space: pre-wrap;
-  font-family: var(--font-serif);
-  position: relative;
-  overflow: hidden;
-}
-
-.status::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right, var(--ncm-red), transparent 60%);
-  opacity: 0.4;
 }
 
 .status.ok {
-  color: var(--green);
-  background: var(--green-soft);
-  border-color: rgba(62, 166, 106, 0.25);
-}
-
-.status.ok::before {
-  background: linear-gradient(to right, var(--green), transparent 60%);
+  color: #2f8f47;
+  background: rgba(89, 178, 106, 0.08);
+  border-color: rgba(89, 178, 106, 0.25);
 }
 
 .status.error {
-  color: var(--text-light);
-  background: var(--danger-soft);
-  border-color: rgba(230, 0, 18, 0.25);
+  color: var(--danger);
+  background: rgba(227, 77, 77, 0.08);
+  border-color: rgba(227, 77, 77, 0.2);
 }
-
-/* ============================================================
-   ACTIONS / BUTTONS
-   ============================================================ */
 
 .popup-actions {
   display: grid;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
 button {
   border: none;
-  font-family: var(--font-serif);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition);
-  letter-spacing: 0.02em;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
 .btn-primary {
-  border-radius: var(--radius-xs);
-  padding: 11px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: white;
+  color: #fff;
   background: var(--ncm-red);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--ncm-red-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--ncm-red-glow);
 }
 
 .btn-secondary {
-  border-radius: var(--radius-xs);
-  padding: 10px 18px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-light);
+  color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--ncm-red);
-  color: var(--ncm-red);
+  background: #fafafa;
 }
 
 .btn-ghost {
-  border: none;
+  color: var(--muted);
   background: transparent;
-  color: var(--text-faint);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 8px;
-  border-radius: var(--radius-xs);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  color: var(--ncm-red);
-  background: var(--ncm-red-soft);
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.55;
   cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
 }
-
-/* ============================================================
-   TOGGLE
-   ============================================================ */
 
 .toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12.5px;
-  color: var(--text-muted);
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--muted);
   cursor: pointer;
-  user-select: none;
-  font-family: var(--font-serif);
-}
-
-.toggle input {
-  accent-color: var(--ncm-red);
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-.toggle-label {
-  line-height: 1.4;
-}
-
-/* ============================================================
-   FOOTER / HINT
-   ============================================================ */
-
-.popup-footer {
-  padding: 12px 20px 18px;
-  position: relative;
-  z-index: 1;
-  border-top: 1px solid var(--hairline);
 }
 
 .hint {
   margin: 0;
-  font-size: 11.5px;
-  line-height: 1.6;
-  color: var(--text-faint);
-  font-family: var(--font-italic);
-  font-style: italic;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
 }
 
 .hint a {
   color: var(--ncm-red);
   text-decoration: none;
-  border-bottom: 1px solid rgba(230, 0, 18, 0.3);
-  transition: border-color var(--transition);
 }
 
 .hint a:hover {
-  border-bottom-color: var(--ncm-red);
-}
-
-/* ============================================================
-   CUSTOM SCROLLBAR
-   ============================================================ */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--rule);
+  text-decoration: underline;
 }
