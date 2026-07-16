@@ -194,4 +194,18 @@ qrLoginBtn?.addEventListener('click', startQrLogin)
 qrCloseBtn?.addEventListener('click', closeQrModal)
 qrRefreshBtn?.addEventListener('click', startQrLogin)
 
+const THEME_STORAGE_KEY = 'ne_theme'
+
+function initTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+initTheme()
 refreshStatus()

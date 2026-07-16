@@ -2,6 +2,7 @@ const COOKIE_KEY = 'ncm_cookie'
 const PROFILE_CACHE_KEY = 'ncm_profile_cache'
 const HIDDEN_SHEET_IDS_KEY = 'ncm_hidden_sheet_ids'
 const SHEET_UPLOAD_TIMES_KEY = 'ncm_sheet_upload_times'
+const THEME_STORAGE_KEY = 'ne_theme'
 
 const COVER_PLACEHOLDER =
   'data:image/svg+xml,' +
@@ -179,7 +180,7 @@ const mallModalFooter = document.getElementById('mallModalFooter')
 const mallModalBackBtn = document.getElementById('mallModalBackBtn')
 const closeMallModalBtn = document.getElementById('closeMallModalBtn')
 const ugcOpenMallModalBtn = document.getElementById('ugcOpenMallModalBtn')
-const tabButtons = document.querySelectorAll('.tab')
+const tabButtons = document.querySelectorAll('.sidebar-nav-item')
 const backToTopBtn = document.getElementById('backToTopBtn')
 const ugcRefreshAllBtn = document.getElementById('ugcRefreshAllBtn')
 
@@ -4343,6 +4344,8 @@ async function initApp() {
   initBackToTop()
   loadBatchLimits()
   renderBatchList()
+  initTheme()
+  initSidebarDate()
 
   await Promise.allSettled([loadToplists(), refreshLoginUI()])
 
@@ -4354,6 +4357,39 @@ async function initApp() {
   } catch {
     // ignore storage errors
   }
+}
+
+function initTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    if (saved === 'light' || saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  } catch {
+    // ignore
+  }
+
+  const toggleBtn = document.getElementById('themeToggleBtn')
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme')
+      const next = current === 'light' ? 'dark' : 'light'
+      document.documentElement.setAttribute('data-theme', next)
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+      } catch {
+        // ignore
+      }
+    })
+  }
+}
+
+function initSidebarDate() {
+  const dateEl = document.getElementById('sidebarDate')
+  if (!dateEl) return
+  const now = new Date()
+  const options = { year: 'numeric', month: 'short', day: 'numeric' }
+  dateEl.textContent = now.toLocaleDateString('en-US', options)
 }
 
 initApp()
